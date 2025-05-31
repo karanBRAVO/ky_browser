@@ -1,5 +1,6 @@
 from tkinter import Tk, Canvas, font
 from url import URL, lex
+from html_parser import HTMLParser
 
 
 class Browser:
@@ -60,6 +61,8 @@ class Browser:
         if url.startswith("view-source:"):
             self.content = body
         else:
+            parser = HTMLParser(body)
+            parser.parse()
             self.content = lex(body)
         self.display_list = self.layout(self.content)
         self.draw()
@@ -90,5 +93,7 @@ class Browser:
 
 if __name__ == "__main__":
     browser = Browser()
-    browser.load("https://browser.engineering/html.html")
+    # browser.load("https://browser.engineering/html.html")
+    browser.load("http://localhost:5500/index.html")
+    # browser.load("https://example.org/index.html")
     browser.window.mainloop()
