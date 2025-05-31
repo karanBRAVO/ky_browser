@@ -100,13 +100,31 @@ class URL:
                     name, value = line.split(":", 1)
                     responseHeaders[name.strip().casefold()] = value.strip()
 
-                contentLength = int(responseHeaders.get("content-length", 0))
-                content = response.read(contentLength)
+                if "content-length" in responseHeaders:
+                    contentLength = int(responseHeaders.get("content-length", 0))
+                    content = response.read(contentLength)
 
-                if responseHeaders.get("content-encoding", "") == "gzip":
-                    content = gzip.decompress(content).decode("utf-8")
+                    if responseHeaders.get("content-encoding", "") == "gzip":
+                        content = gzip.decompress(content).decode("utf-8")
+                    else:
+                        content = content.decode("utf-8")
+                elif "transfer-encoding" in responseHeaders and responseHeaders.get("transfer-encoding", "") == "chunked":
+                    content = ""
+                    while True:
+                        chunk = response.readline().strip()
+                        if not chunk or chunk == b"0":
+                            break
+                        chunkSize = int(chunk, 16)
+                        if chunkSize == 0:
+                            break
+                        chunkData = response.read(chunkSize)
+                        if responseHeaders.get("content-encoding", "") == "gzip":
+                            chunkData = gzip.decompress(chunkData).decode("utf-8")
+                        else:
+                            chunkData = chunkData.decode("utf-8")
+                        content += chunkData
                 else:
-                    content = content.decode("utf-8")
+                    content = ""
 
                 # redirects
                 if status >= 300 and status < 400:
@@ -155,11 +173,12 @@ class URL:
                     return "<html><body></body></html>"
                 return "<html><body><h1>About Page</h1></body></html>"
         except Exception as e:
-                print(f"Error: {e}")
-                return URL("about:blank").request()
+            print(f"Error: {e}")
+            return URL("about:blank").request()
 
 
-def show(body):
+def lex(body):
+    text = ""
     in_tag = False
     for char in body:
         if char == "<":
@@ -167,16 +186,17 @@ def show(body):
         elif char == ">":
             in_tag = False
         elif not in_tag:
-            print(char, end="")
+            text += char
+    return text
 
 
 def load(url: URL):
     content = url.request()
-    show(content)
+    print(content)
 
 
 if __name__ == "__main__":
-    url = URL("https://example.org/index.html")
+    # url = URL("https://example.org/index.html")
     # url = URL("https:/example.org/index.html") # invalid URL for testing
     # url = URL("https://browser.engineering/im/http-tls-2.gif")
     # url = URL("http://localhost:8080")
@@ -184,4 +204,5 @@ if __name__ == "__main__":
     # url = URL("data:text/html,<h1>Hello World!</h1>")
     # url = URL("view-source:http://example.org/")
     # url = URL("http://browser.engineering/redirect3")
+    url = URL("https://browser.engineering/html.html")
     load(url)

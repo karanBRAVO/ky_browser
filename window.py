@@ -1,5 +1,5 @@
 from tkinter import Tk, Canvas, font
-from url import URL
+from url import URL, lex
 
 
 class Browser:
@@ -20,7 +20,10 @@ class Browser:
         self.scroll = 0
         self.content = ""
         self.font = font.Font(
-            family="JetBrainsMonoNL NFP SemiBold", size=14, weight="normal", slant="roman"
+            family="JetBrainsMonoNL NFP SemiBold",
+            size=14,
+            weight="normal",
+            slant="roman",
         )
         # print(font.families()) # all available fonts
 
@@ -66,7 +69,9 @@ class Browser:
         for x, y, char in self.display_list:
             if y > self.scroll + self.HEIGHT or y + self.VSTEP < self.scroll:
                 continue
-            self.canvas.create_text(x, y - self.scroll, text=char, font=self.font, anchor="nw")
+            self.canvas.create_text(
+                x, y - self.scroll, text=char, font=self.font, anchor="nw"
+            )
 
     def layout(self, text: str):
         display_list = []
@@ -83,20 +88,7 @@ class Browser:
         return display_list
 
 
-def lex(body):
-    text = ""
-    in_tag = False
-    for char in body:
-        if char == "<":
-            in_tag = True
-        elif char == ">":
-            in_tag = False
-        elif not in_tag:
-            text += char
-    return text
-
-
 if __name__ == "__main__":
     browser = Browser()
-    browser.load("view-source:https://example.org")
+    browser.load("https://browser.engineering/html.html")
     browser.window.mainloop()
