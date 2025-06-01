@@ -16,7 +16,7 @@ class DocumentType:
         self.parent = parent
 
     def __str__(self):
-        return f"<!DOCTYPE HTML> ~~~ {self.parent}"
+        return f"<!DOCTYPE HTML>"
 
 
 # Element Node
@@ -25,19 +25,16 @@ class Element:
         self.tag = tag
         self.children = []
         self.parent = parent
+        self.attributes = {}
+
+    def set_attribute(self, name: str, value: str):
+        self.attributes[name] = value
 
     def add_child(self, child):
         self.children.append(child)
 
     def __str__(self):
-        return f"<{self.tag}> ~~~ {self.parent}"
-
-
-# Attribute Node
-class Attribute:
-    def __init__(self, name: str, value):
-        self.name = name
-        self.value = value
+        return f"<{self.tag}> Attributes: {self.attributes} Childrens: {len(self.children)}"
 
 
 # Text Node
@@ -47,7 +44,7 @@ class Text:
         self.parent = parent
 
     def __str__(self):
-        return f"{self.text} ~~~ {self.parent}"
+        return f"{self.text}"
 
 
 # Comment Node
@@ -57,4 +54,4 @@ class Comment:
         self.parent = parent
 
     def __str__(self):
-        return f"<!-- {self.comment} --> ~~~ {self.parent}"
+        return f"<!-- {self.comment} -->"

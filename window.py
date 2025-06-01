@@ -1,6 +1,7 @@
 from tkinter import Tk, Canvas, font
 from url import URL, lex
 from html_parser import HTMLParser
+from nodes import Document, DocumentType, Element, Text, Comment
 
 
 class Browser:
@@ -19,6 +20,9 @@ class Browser:
         self.canvas.pack(fill="both", expand=True)
 
         self.scroll = 0
+        self.url = ""
+        self.display_list = []
+        self.cursor_y = self.VSTEP
         self.content = ""
         self.font = font.Font(
             family="JetBrainsMonoNL NFP SemiBold",
@@ -38,7 +42,7 @@ class Browser:
     def configure(self, event):
         self.WIDTH = event.width
         self.HEIGHT = event.height
-        self.display_list = self.layout(self.content)
+        self.parse()
         self.draw()
 
     def mousewheel(self, event):
@@ -57,14 +61,17 @@ class Browser:
         self.draw()
 
     def load(self, url):
-        body = URL(url).request()
-        if url.startswith("view-source:"):
-            self.content = body
+        self.url = url
+        self.content = URL(url).request()
+
+    def parse(self):
+        if not self.content or not self.url:
+            return
+        if self.url.startswith("view-source:"):
+            self.layout(self.content)
         else:
-            parser = HTMLParser(body)
-            parser.parse()
-            self.content = lex(body)
-        self.display_list = self.layout(self.content)
+            root = HTMLParser(self.content).parse()
+            self.recurse(root)
         self.draw()
 
     def draw(self):
@@ -77,23 +84,39 @@ class Browser:
             )
 
     def layout(self, text: str):
-        display_list = []
         cursor_x, cursor_y = self.HSTEP, self.VSTEP
         for c in text:
             if c == "\n":
                 cursor_x = self.HSTEP
                 cursor_y += self.VSTEP
-            display_list.append((cursor_x, cursor_y, c))
+            self.display_list.append((cursor_x, cursor_y, c))
             cursor_x += self.HSTEP
             if cursor_x > self.WIDTH - self.HSTEP:
                 cursor_x = self.HSTEP
                 cursor_y += self.VSTEP
-        return display_list
+
+    def recurse(self, root=None):
+        if root is None:
+            return
+
+        if isinstance(root, Text):
+            text = root.text
+            self.display_list.append((self.HSTEP, self.cursor_y, text))
+            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+        elif isinstance(root, Comment):
+            text = f"<!-- {root.comment} -->"
+            self.display_list.append((self.HSTEP, self.cursor_y, text))
+            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+
+        if isinstance(root, Document) or isinstance(root, Element):
+            for child in root.children:
+                self.recurse(child)
 
 
 if __name__ == "__main__":
     browser = Browser()
     # browser.load("https://browser.engineering/html.html")
+    # browser.load("view-source:https://browser.engineering/html.html")
     browser.load("http://localhost:5500/index.html")
     # browser.load("https://example.org/index.html")
     browser.window.mainloop()
