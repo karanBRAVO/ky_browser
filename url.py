@@ -13,7 +13,11 @@ class URL:
         self.cache = {}
 
         try:
-            if url.startswith("http"):
+            if (
+                url.startswith("http")
+                or url.startswith("https")
+                or url.startswith("file")
+            ):
                 self.scheme, url = url.split("://", 1)
             else:
                 self.scheme, url = url.split(":", 1)
@@ -108,7 +112,10 @@ class URL:
                         content = gzip.decompress(content).decode("utf-8")
                     else:
                         content = content.decode("utf-8")
-                elif "transfer-encoding" in responseHeaders and responseHeaders.get("transfer-encoding", "") == "chunked":
+                elif (
+                    "transfer-encoding" in responseHeaders
+                    and responseHeaders.get("transfer-encoding", "") == "chunked"
+                ):
                     content = ""
                     while True:
                         chunk = response.readline().strip()
@@ -156,22 +163,22 @@ class URL:
                         "max-age": maxAge,
                     }
 
-                return content
+                return content, responseHeaders.get("content-type", "")
             elif self.scheme == "file":
                 try:
                     with open(self.path, "r", encoding="utf-8") as file:
-                        return file.read()
+                        return file.read(), "text/plain"
                 except FileNotFoundError:
-                    return ""
+                    return "", "text/plain"
             elif self.scheme == "data":
-                return self.content
+                return self.content, self.mediaType
             elif self.scheme == "view-source":
                 view_source_url = URL(self.url)
                 return view_source_url.request()
             elif self.scheme == "about":
                 if self.path == "blank":
-                    return "<html><body></body></html>"
-                return "<html><body><h1>About Page</h1></body></html>"
+                    return "<html><body></body></html>", "text/html"
+                return "<html><body><h1>About Page</h1></body></html>", "text/html"
         except Exception as e:
             print(f"Error: {e}")
             return URL("about:blank").request()
@@ -200,9 +207,9 @@ if __name__ == "__main__":
     # url = URL("https:/example.org/index.html") # invalid URL for testing
     # url = URL("https://browser.engineering/im/http-tls-2.gif")
     # url = URL("http://localhost:8080")
-    # url = URL("file:///E:/ky_browser/main.py")
-    # url = URL("data:text/html,<h1>Hello World!</h1>")
+    # url = URL("file:///E:/ky_browser/html_parser.py")
+    url = URL("data:text/html,<h1>Hello World!</h1>")
     # url = URL("view-source:http://example.org/")
     # url = URL("http://browser.engineering/redirect3")
-    url = URL("https://browser.engineering/html.html")
+    # url = URL("https://browser.engineering/html.html")
     load(url)

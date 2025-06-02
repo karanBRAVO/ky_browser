@@ -28,6 +28,7 @@ class Browser:
         self.cursor_x = self.HSTEP
         self.cursor_y = self.VSTEP
         self.content = ""
+        self.mediaType = "text/plain"
         self.font = font.Font(
             family="FiraCode Nerd Font Mono",
             size=14,
@@ -76,7 +77,7 @@ class Browser:
 
     def load(self, url):
         self.url = url
-        self.content = URL(url).request()
+        self.content, self.mediaType = URL(url).request()
 
     def parse(self):
         self.display_list.clear()
@@ -84,11 +85,14 @@ class Browser:
         self.cursor_y = self.VSTEP
         if not self.content or not self.url:
             return
-        root = HTMLParser(self.content).parse()
-        if self.url.startswith("view-source:"):
-            self.recurse(root, view_source=True)
+        if self.mediaType == "text/html":
+            root = HTMLParser(self.content).parse()
+            if self.url.startswith("view-source:"):
+                self.recurse(root, view_source=True)
+            else:
+                self.recurse(root, view_source=False, indent=self.HSTEP)
         else:
-            self.recurse(root, view_source=False, indent=self.HSTEP)
+            self.layout(self.content)
         self.draw()
 
     def draw(self):
@@ -115,7 +119,7 @@ class Browser:
             cursor_x += self.HSTEP
             if cursor_x > self.WIDTH - self.HSTEP:
                 cursor_x = self.HSTEP
-                cursor_y += self.VSTEP
+                cursor_y += self.font.metrics()["linespace"] + self.VSTEP
 
     def _update_display_list(self, text: str, x: int, color: str):
         if not text:
@@ -154,7 +158,7 @@ class Browser:
         if root is None:
             return
 
-        if view_source:
+        if self.mediaType == "text/html" and view_source:
             # DOCTYPE
             if isinstance(root, DocumentType):
                 text = f"<!"
@@ -201,15 +205,16 @@ class Browser:
                     text, indent + self.font.measure(prev_text), "white"
                 )
                 self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+            # comments
+            elif isinstance(root, Comment):
+                text = f"<!-- {root.comment} -->"
+                self._update_display_list(text, indent, "gray")
+                self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
 
-        # text and comments
+        # text
         if isinstance(root, Text):
             text = root.text
             self._update_display_list(text, indent, "white")
-            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
-        elif isinstance(root, Comment):
-            text = f"<!-- {root.comment} -->"
-            self._update_display_list(text, indent, "gray")
             self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
 
         # recurse children
@@ -220,7 +225,7 @@ class Browser:
                 )
 
         # closing tags
-        if view_source:
+        if self.mediaType == "text/html" and view_source:
             if isinstance(root, Element):
                 if not root.selfClosing:
                     text = f"</"
@@ -245,8 +250,10 @@ class Browser:
 if __name__ == "__main__":
     browser = Browser()
     # browser.load("https://browser.engineering/html.html")
-    browser.load("view-source:https://browser.engineering/html.html")
+    # browser.load("view-source:https://browser.engineering/html.html")
     # browser.load("view-source:http://localhost:5500/index.html")
     # browser.load("http://localhost:5500/index.html")
+    browser.load("file:///E:/ky_browser/html_parser.py")
+    # browser.load("data:text/html,<h1>Hello World!</h1>")
     # browser.load("https://example.org/index.html")
     browser.window.mainloop()
