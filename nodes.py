@@ -21,11 +21,12 @@ class DocumentType:
 
 # Element Node
 class Element:
-    def __init__(self, tag: str, parent=None):
+    def __init__(self, tag: str, parent=None, selfClosing: bool = False):
         self.tag = tag
         self.children = []
         self.parent = parent
         self.attributes = {}
+        self.selfClosing = selfClosing
 
     def set_attribute(self, name: str, value: str):
         self.attributes[name] = value

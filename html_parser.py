@@ -54,7 +54,7 @@ class HTMLParser:
                 attributes = self._parse_attributes(attrs)
         else:
             tag_name = content
-        new_element = Element(tag_name.strip().lower(), current_node)
+        new_element = Element(tag_name.strip().lower(), current_node, True)
         for name, value in attributes:
             new_element.set_attribute(name, value)
         current_node.add_child(new_element)
@@ -167,8 +167,6 @@ class HTMLParser:
         while len(open_nodes):
             open_nodes.pop()
             current_node = current_node.parent
-
-        print_tree(self.root)
 
         return self.root
 
