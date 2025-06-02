@@ -551,9 +551,14 @@ class Browser:
 
         # text
         if isinstance(root, Text):
-            text = root.text
-            self._update_display_list(text, indent, "white")
-            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+            if root.parent and root.parent.tag == "title":
+                text = root.text.strip()
+                if text:
+                    self.window.title(text)
+            else:
+                text = root.text
+                self._update_display_list(text, indent, "white")
+                self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
 
         # recurse children
         if isinstance(root, Document) or isinstance(root, Element):
@@ -590,8 +595,8 @@ if __name__ == "__main__":
     # browser.load("https://browser.engineering/html.html")
     # browser.load("view-source:https://browser.engineering/html.html")
     # browser.load("view-source:http://localhost:5500/index.html")
-    # browser.load("http://localhost:5500/index.html")
-    browser.load("file:///E:/ky_browser/html_parser.py")
+    browser.load("http://localhost:5500/index.html")
+    # browser.load("file:///E:/ky_browser/html_parser.py")
     # browser.load("data:text/html,<h1>Hello World!</h1>")
     # browser.load("https://example.org/index.html")
     browser.window.mainloop()
