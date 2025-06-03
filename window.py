@@ -123,7 +123,7 @@ class Browser:
                 s.source_view(self.font, root)
             else:
                 s.layout(root)
-                s.html_view(s.node)
+                s.render(s.node)
                 # print_layout_tree(s.node)
         else:
             s.file_view(self.content, self.font)
@@ -165,7 +165,7 @@ class Browser:
 
 if __name__ == "__main__":
     browser = Browser()
-    # browser.load("https://browser.engineering/html.html")
+    # browser.load("https://en.wikipedia.org/wiki/HTML")
     # browser.load("view-source:https://browser.engineering/html.html")
     # browser.load("view-source:http://localhost:5500/index.html")
     # browser.load("http://localhost:5500/index.html")

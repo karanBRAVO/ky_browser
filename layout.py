@@ -291,7 +291,7 @@ class Layout:
                 cursor_x = self.HSTEP
                 cursor_y += font.metrics()["linespace"] + self.VSTEP
 
-    def html_view(self, root=None):
+    def render(self, root=None):
         """
         Use this method to display the layout tree visually.
 
@@ -347,7 +347,7 @@ class Layout:
                     )
 
         for child in root.children:
-            self.html_view(child)
+            self.render(child)
 
 
 def print_layout_tree(node=None, indent=0):

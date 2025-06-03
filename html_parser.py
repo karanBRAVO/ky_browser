@@ -8,6 +8,21 @@ class HTMLParser:
     ATTRIBUTES_PATTERN = (
         r'([a-zA-Z][\w-]*)\s*(?:=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+)))?'
     )
+    VOID_TAGS = [
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "source",
+        "track",
+        "wbr",
+    ]
 
     def __init__(self, html: str):
         self.html = html.strip()
@@ -91,6 +106,11 @@ class HTMLParser:
                     attributes = self._parse_attributes(attrs)
             else:
                 tag_name = content
+            if tag_name.strip().lower() in self.VOID_TAGS:
+                content, current_node = self._handle_self_closing_tag(
+                    content, current_node
+                )
+                return current_node, j, open_nodes
             new_element = Element(tag_name.strip().lower(), current_node)
             current_node.add_child(new_element)
             open_nodes.append(tag_name.strip().lower())
@@ -109,6 +129,9 @@ class HTMLParser:
 
         # DOCTYPE
         html = self._handle_doctype(html, current_node)
+
+        # format HTML
+        html = self._format_text(html)
 
         open_nodes = []
 
