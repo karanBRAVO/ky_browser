@@ -33,7 +33,7 @@ class Browser:
         # layout
         self.display_list = []
         self.font = font.Font(
-            family="FiraCode Nerd Font Mono",
+            family="Courier",
             size=14,
             weight="normal",
             slant="roman",
@@ -115,18 +115,18 @@ class Browser:
         if not self.content or not self.url:
             return
 
-        s = Layout(self.window, self.WIDTH, self.HEIGHT, self.font)
+        s = Layout(self.window, self.WIDTH, self.HEIGHT)
 
         if "text/html" in self.mediaType:
             root = HTMLParser(self.content).parse()
 
             if self.url.startswith("view-source:"):
-                s.source_view(root)
+                s.source_view(self.font, root)
             else:
                 s.layout(root)
                 s.html_view(s.node)
         else:
-            s.file_view(self.content)
+            s.file_view(self.content, self.font)
 
         # draw the display list
         self.display_list = s.display_list

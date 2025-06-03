@@ -49,6 +49,12 @@ class TextNode(LayoutNode):
         name: str = "TextNode",
     ):
         super().__init__(x, y, width, height, parent, name)
+        self.font = Font(
+            family="Times New Roman",
+            size=14,
+            weight="normal",
+            slant="roman",
+        )
 
 
 class Layout:
@@ -60,12 +66,11 @@ class Layout:
 
     HSTEP, VSTEP = 13, 18
 
-    def __init__(self, window, screen_width: int, screen_height: int, font: Font):
+    def __init__(self, window, screen_width: int, screen_height: int):
         self.window = window
         self.node = None
         self.SCREEN_WIDTH = screen_width
         self.SCREEN_HEIGHT = screen_height
-        self.font = font
         self.display_list = []
         self.cursor_x = self.HSTEP
         self.cursor_y = self.VSTEP
@@ -108,7 +113,7 @@ class Layout:
                     new_node.x = prev.x
                     new_node.y = prev.y
                     new_node.width = prev.width
-                    new_node.height = self.font.metrics()["linespace"]
+                    new_node.height = new_node.font.metrics()["linespace"]
 
             if isinstance(node, Document) or isinstance(node, Element):
                 for child in node.children:
@@ -127,7 +132,9 @@ class Layout:
 
         recurse(node)
 
-    def _update_source_view_display_list(self, text: str, x: int, color: str):
+    def _update_source_view_display_list(
+        self, text: str, x: int, color: str, font: Font
+    ):
         """
         Helper method to update the `display_list` for `source_view` method.
         """
@@ -139,33 +146,31 @@ class Layout:
         for i, char in enumerate(text):
             if char == "\n":
                 self.cursor_x = x
-                self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+                self.cursor_y += font.metrics()["linespace"] + self.VSTEP
             elif char == " ":
                 if buffer:
                     self.display_list.append(
-                        DrawText(self.cursor_x, self.cursor_y, buffer, self.font, color)
+                        DrawText(self.cursor_x, self.cursor_y, buffer, font, color)
                     )
-                    self.cursor_x += self.font.measure(buffer)
+                    self.cursor_x += font.measure(buffer)
                     j = text.find(" ", i + 1)
                     if j != -1:
                         next_word = text[i + 1 : j]
-                        next_word_width = self.font.measure(next_word)
+                        next_word_width = font.measure(next_word)
                         if self.cursor_x + next_word_width > self.SCREEN_WIDTH:
                             self.cursor_x = x
-                            self.cursor_y += (
-                                self.font.metrics()["linespace"] + self.VSTEP
-                            )
+                            self.cursor_y += font.metrics()["linespace"] + self.VSTEP
                     buffer = ""
                 if i < 1 or text[i - 1] != " ":
-                    self.cursor_x += self.font.measure(" ")
+                    self.cursor_x += font.measure(" ")
             else:
                 buffer += char
         if buffer:
             self.display_list.append(
-                DrawText(self.cursor_x, self.cursor_y, buffer, self.font, color)
+                DrawText(self.cursor_x, self.cursor_y, buffer, font, color)
             )
 
-    def source_view(self, root=None, indent=0):
+    def source_view(self, font: Font, root=None, indent=0):
         """
         Computes the `display_list` for viewing the `HTML` source code in a formatted way.
         """
@@ -176,53 +181,49 @@ class Layout:
         if isinstance(root, DocumentType):
             text = f"<!"
             prev_text = text
-            self._update_source_view_display_list(text, indent, "white")
+            self._update_source_view_display_list(text, indent, "white", font)
             text = "DOCTYPE "
             self._update_source_view_display_list(
-                text, indent + self.font.measure(prev_text), "red"
+                text, indent + font.measure(prev_text), "red", font
             )
             prev_text += text
             text = "HTML>"
             self._update_source_view_display_list(
-                text, indent + self.font.measure(prev_text), "white"
+                text, indent + font.measure(prev_text), "white", font
             )
-            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+            self.cursor_y += font.metrics()["linespace"] + self.VSTEP
         # opening tags
         elif isinstance(root, Element):
             text = f"<"
             prev_text = text
-            self._update_source_view_display_list(text, indent, "white")
+            self._update_source_view_display_list(text, indent, "white", font)
             text = f"{root.tag}"
             self._update_source_view_display_list(
-                text, indent + self.font.measure(prev_text), "red"
+                text, indent + font.measure(prev_text), "red", font
             )
             # attributes
             for name, value in root.attributes.items():
                 prev_text += text
                 text = f" {name}="
                 self._update_source_view_display_list(
-                    text,
-                    indent + self.font.measure(prev_text),
-                    "green",
+                    text, indent + font.measure(prev_text), "green", font
                 )
                 prev_text += text
                 text = f'"{value}"'
                 self._update_source_view_display_list(
-                    text,
-                    indent + self.font.measure(prev_text),
-                    "yellow",
+                    text, indent + font.measure(prev_text), "yellow", font
                 )
             prev_text += text
             text = f"{' /' if root.selfClosing else ''}>"
             self._update_source_view_display_list(
-                text, indent + self.font.measure(prev_text), "white"
+                text, indent + font.measure(prev_text), "white", font
             )
-            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+            self.cursor_y += font.metrics()["linespace"] + self.VSTEP
         # comments
         elif isinstance(root, Comment):
             text = f"<!-- {root.comment} -->"
-            self._update_source_view_display_list(text, indent, "gray")
-            self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+            self._update_source_view_display_list(text, indent, "gray", font)
+            self.cursor_y += font.metrics()["linespace"] + self.VSTEP
 
         # text
         if isinstance(root, Text):
@@ -232,36 +233,32 @@ class Layout:
                     self.window.title(text)
             else:
                 text = root.text
-                self._update_source_view_display_list(text, indent, "white")
-                self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+                self._update_source_view_display_list(text, indent, "white", font)
+                self.cursor_y += font.metrics()["linespace"] + self.VSTEP
 
         # recurse children
         if isinstance(root, Document) or isinstance(root, Element):
             for child in root.children:
-                self.source_view(child, indent + self.HSTEP)
+                self.source_view(font, child, indent + self.HSTEP)
 
         # closing tags
         if isinstance(root, Element):
             if not root.selfClosing:
                 text = f"</"
                 prev_text = text
-                self._update_source_view_display_list(text, indent, "white")
+                self._update_source_view_display_list(text, indent, "white", font)
                 text = f"{root.tag}"
                 self._update_source_view_display_list(
-                    text,
-                    indent + self.font.measure(prev_text),
-                    "red",
+                    text, indent + font.measure(prev_text), "red", font
                 )
                 prev_text += text
                 text = f">"
                 self._update_source_view_display_list(
-                    text,
-                    indent + self.font.measure(prev_text),
-                    "white",
+                    text, indent + font.measure(prev_text), "white", font
                 )
-                self.cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+                self.cursor_y += font.metrics()["linespace"] + self.VSTEP
 
-    def file_view(self, text: str):
+    def file_view(self, text: str, font: Font):
         """
         Compute the `display_list` for viewing `file` content in a simple text format.
         """
@@ -270,17 +267,17 @@ class Layout:
             if c == "\n":
                 cursor_x = self.HSTEP
                 cursor_y += self.VSTEP
-            self.display_list.append(
-                DrawText(cursor_x, cursor_y, c, self.font, "white")
-            )
+            self.display_list.append(DrawText(cursor_x, cursor_y, c, font, "white"))
             cursor_x += self.HSTEP
             if cursor_x > self.SCREEN_WIDTH - self.HSTEP:
                 cursor_x = self.HSTEP
-                cursor_y += self.font.metrics()["linespace"] + self.VSTEP
+                cursor_y += font.metrics()["linespace"] + self.VSTEP
 
     def html_view(self, root=None):
         """
         Use this method to display the layout tree visually.
+
+        :param root: The root node of the layout tree. (generally represent the `HTML`)
 
         **Note:**
         Call the `layout` method to build the layout tree and then call this method to populate the display list.
@@ -303,7 +300,7 @@ class Layout:
                         root.x,
                         root.y,
                         root.node.text,
-                        self.font,
+                        root.font,
                         "white",
                     )
                 )
