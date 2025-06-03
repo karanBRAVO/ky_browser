@@ -1,14 +1,13 @@
 from tkinter import Tk, Canvas, font
 from url import URL
 from html_parser import HTMLParser
-from layout import Layout
+from layout import Layout, print_layout_tree
 from scrollbar import Scrollbar
 
 
 class Browser:
-    WIDTH = 800
-    HEIGHT = 500
-    SCROLL_STEP = 100
+    WIDTH, HEIGHT = 800, 500
+    MIN_WIDTH, MIN_HEIGHT = 400, 300
     HSTEP, VSTEP = 13, 18
     OS = "WINDOWS"  # or "LINUX", "MACOS"
 
@@ -17,7 +16,7 @@ class Browser:
         self.window.title("Ky Browser")
         self.window.geometry(f"{self.WIDTH}x{self.HEIGHT}")
         self.window.resizable(True, True)
-        self.window.minsize(self.WIDTH, self.HEIGHT)
+        self.window.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
 
         # Create a canvas for drawing content
         self.canvas = Canvas(
@@ -125,6 +124,7 @@ class Browser:
             else:
                 s.layout(root)
                 s.html_view(s.node)
+                # print_layout_tree(s.node)
         else:
             s.file_view(self.content, self.font)
 

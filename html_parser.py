@@ -121,6 +121,7 @@ class HTMLParser:
                 if buffer:
                     text_content = buffer.strip()
                     if text_content:
+                        text_content = self._format_text(text_content)
                         new_element = Text(text_content, current_node)
                         current_node.add_child(new_element)
                 buffer = ""
@@ -161,6 +162,7 @@ class HTMLParser:
         if buffer:
             text_content = buffer.strip()
             if text_content:
+                text_content = self._format_text(text_content)
                 new_element = Text(text_content, current_node)
                 current_node.add_child(new_element)
 
@@ -169,6 +171,13 @@ class HTMLParser:
             current_node = current_node.parent
 
         return self.root
+
+    def _format_text(self, text: str):
+        # Replace newline followed by non-whitespace character with space
+        text = re.sub(r"\n(?=\S)", " ", text)
+        # Collapse all consecutive whitespace (space, tab, newline) into a single space
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
 
 
 def print_tree(start_node=None, indent=0):

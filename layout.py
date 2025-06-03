@@ -113,7 +113,25 @@ class Layout:
                     new_node.x = prev.x
                     new_node.y = prev.y
                     new_node.width = prev.width
-                    new_node.height = new_node.font.metrics()["linespace"]
+
+                    # Calculate height based on text content
+                    h = 0
+                    text = ""
+                    for word in node.text.split():
+                        if text:
+                            test_line = text + " " + word
+                        else:
+                            test_line = word
+                        text_width = new_node.font.measure(test_line)
+                        if text_width > self.SCREEN_WIDTH - self.HSTEP:
+                            h += new_node.font.metrics()["linespace"]
+                            text = word
+                        else:
+                            text = test_line
+                    if text:
+                        h += new_node.font.metrics()["linespace"]
+
+                    new_node.height = h
 
             if isinstance(node, Document) or isinstance(node, Element):
                 for child in node.children:
@@ -295,15 +313,38 @@ class Layout:
                     )
                 )
             elif isinstance(root.node, Text):
-                self.display_list.append(
-                    DrawText(
-                        root.x,
-                        root.y,
-                        root.node.text,
-                        root.font,
-                        "white",
+                text = ""
+                cursor_y = root.y
+                for word in root.node.text.split():
+                    if text:
+                        test_line = text + " " + word
+                    else:
+                        test_line = word
+                    text_width = root.font.measure(test_line)
+                    if text_width > self.SCREEN_WIDTH - self.HSTEP:
+                        self.display_list.append(
+                            DrawText(
+                                root.x,
+                                cursor_y,
+                                text,
+                                root.font,
+                                "white",
+                            )
+                        )
+                        cursor_y += root.font.metrics()["linespace"]
+                        text = word
+                    else:
+                        text = test_line
+                if text:
+                    self.display_list.append(
+                        DrawText(
+                            root.x,
+                            cursor_y,
+                            text,
+                            root.font,
+                            "white",
+                        )
                     )
-                )
 
         for child in root.children:
             self.html_view(child)
