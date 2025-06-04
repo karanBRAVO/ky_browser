@@ -109,10 +109,13 @@ class Layout:
                 )
                 new_node.node = node
                 if prev is not None:
+                    ch = 0
+                    for child in prev.children:
+                        ch += child.height
                     prev.add_child(new_node)
                     new_node.parent = prev
                     new_node.x = prev.x
-                    new_node.y = prev.y
+                    new_node.y = prev.y + ch
                     new_node.width = prev.width
 
                     # Calculate height based on text content
