@@ -147,16 +147,17 @@ class Browser:
         )
 
         for cmd in self.display_list:
-            if (
-                cmd.y > self.scroll_bar.v_scroll + effective_height
-                or cmd.y + self.VSTEP < self.scroll_bar.v_scroll
-            ):
-                continue
-            if (
-                cmd.x > self.scroll_bar.h_scroll + effective_width
-                or cmd.x < self.scroll_bar.h_scroll
-            ):
-                continue
+            # Optimizations: Don't draw commands outside the visible area
+            # if (
+            #     cmd.y > self.scroll_bar.v_scroll + effective_height
+            #     or cmd.y + self.VSTEP < self.scroll_bar.v_scroll
+            # ):
+            #     continue
+            # if (
+            #     cmd.x > self.scroll_bar.h_scroll + effective_width
+            #     or cmd.x < self.scroll_bar.h_scroll
+            # ):
+            #     continue
             cmd.execute(self.canvas, self.scroll_bar.h_scroll, self.scroll_bar.v_scroll)
 
         # Draw scrollbars on top of content

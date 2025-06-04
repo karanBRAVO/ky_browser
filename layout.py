@@ -1,6 +1,7 @@
 from nodes import Document, DocumentType, Element, Text, Comment
 from tkinter.font import Font
 from draw import DrawText, DrawRect
+from css_parser import CSSParser
 
 
 class LayoutNode:
@@ -302,17 +303,32 @@ class Layout:
         """
         if root.node is not None:
             if isinstance(root.node, Element):
+                styles = {}
+                if "style" in root.node.attributes:
+                    inline_styles = root.node.attributes["style"]
+                    styles = CSSParser(inline_styles=inline_styles).parse()
+
+                bgColor = styles.get("background-color", "transparent")
+
                 self.display_list.append(
                     DrawRect(
                         root.x,
                         root.y,
                         root.width,
                         root.height,
-                        border="yellow",
-                        backgound="black",
+                        border=None,
+                        backgound=bgColor if bgColor != "transparent" else "black",
                     )
                 )
             elif isinstance(root.node, Text):
+                styles = {}
+                if "style" in root.node.parent.attributes:
+                    inline_styles = root.node.parent.attributes["style"]
+                    styles = CSSParser(inline_styles=inline_styles).parse()
+
+                textColor = styles.get("color", "transparent")
+
+                # break the text into lines based on the width
                 text = ""
                 cursor_y = root.y
                 for word in root.node.text.split():
@@ -328,7 +344,7 @@ class Layout:
                                 cursor_y,
                                 text,
                                 root.font,
-                                "white",
+                                textColor if textColor != "transparent" else "white",
                             )
                         )
                         cursor_y += root.font.metrics()["linespace"]
@@ -342,7 +358,7 @@ class Layout:
                             cursor_y,
                             text,
                             root.font,
-                            "white",
+                            textColor if textColor != "transparent" else "white",
                         )
                     )
 
