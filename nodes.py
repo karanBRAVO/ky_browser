@@ -27,6 +27,7 @@ class Element:
         self.parent = parent
         self.attributes = {}
         self.selfClosing = selfClosing
+        self.styles = {} # external styles
 
     def set_attribute(self, name: str, value: str):
         self.attributes[name] = value

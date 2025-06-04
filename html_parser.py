@@ -28,6 +28,55 @@ class HTMLParser:
         self.html = html.strip()
         self.root = Document()
 
+        self.links = {
+            "css": [],
+            "a": [],
+            "img": [],
+        }
+
+    def _add_link(self, link_type: str, href: str):
+        """
+        Add a link to the appropriate category.
+
+        :param link_type: Type of link (e.g., "css", "a", "img").
+        :param href: The URL or path of the link.
+        """
+        if link_type in self.links:
+            self.links[link_type].append(href)
+        else:
+            raise ValueError(f"Unsupported link type: {link_type}")
+
+    def extract_links(self, root=None):
+        """
+        Recursively extract links from the HTML document.
+        Currently supports: css, anchor (a), and image (img) links.
+
+        :param root: The root element of the HTML document.
+        :type root: Document or Element
+        """
+        if root is None:
+            return
+
+        if isinstance(root, Element):
+            if root.tag == "link" and root.attributes.get("rel") == "stylesheet":
+                href = root.attributes.get("href")
+                if href:
+                    self._add_link("css", href)
+
+            elif root.tag == "a":
+                href = root.attributes.get("href")
+                if href:
+                    self._add_link("a", href)
+
+            elif root.tag == "img":
+                href = root.attributes.get("src")
+                if href:
+                    self._add_link("img", href)
+
+        if isinstance(root, Document) or isinstance(root, Element):
+            for child in root.children:
+                self.extract_links(child)
+
     def _handle_doctype(self, html: str, current_node):
         if re.match(self.DOCTYPE_PATTERN, html):
             current_node.add_child(DocumentType(current_node))

@@ -1,7 +1,8 @@
 from nodes import Document, DocumentType, Element, Text, Comment
-from tkinter.font import Font
+from tkinter.font import Font as tk_Font
 from draw import DrawText, DrawRect
 from css_parser import CSSParser
+from font import Font
 
 
 class LayoutNode:
@@ -50,12 +51,7 @@ class TextNode(LayoutNode):
         name: str = "TextNode",
     ):
         super().__init__(x, y, width, height, parent, name)
-        self.font = Font(
-            family="Times New Roman",
-            size=14,
-            weight="normal",
-            slant="roman",
-        )
+        self.font = Font().get_font()
 
 
 class Layout:
@@ -66,6 +62,13 @@ class Layout:
     """
 
     HSTEP, VSTEP = 13, 18
+    INHERITED_STYLE_PROPERTIES = [
+        "color",
+        "font-size",
+        "font-family",
+        "font-weight",
+        "font-style",
+    ]
 
     def __init__(self, window, screen_width: int, screen_height: int):
         self.window = window
@@ -76,7 +79,7 @@ class Layout:
         self.cursor_x = self.HSTEP
         self.cursor_y = self.VSTEP
 
-    def layout(self, node=None):
+    def layout(self, node=None, styles={}):
         """
         Builds the layout tree from the given `node`.
         """
@@ -91,6 +94,8 @@ class Layout:
                 new_node = LayoutNode(
                     0, 0, self.SCREEN_WIDTH, self.SCREEN_HEIGHT, None, node.tag
                 )
+                # assign external styles to the node
+                node.styles.update(styles.get(node.tag, {}))
                 new_node.node = node
                 if prev is not None:
                     ch = 0
@@ -118,6 +123,11 @@ class Layout:
                     new_node.y = prev.y + ch
                     new_node.width = prev.width
 
+                    external_styles = node.parent.styles
+                    css_parser = CSSParser()
+                    text_styles = css_parser.extract_text_styles(external_styles)
+                    new_node.font = Font().get_font(text_styles)
+
                     # Calculate height based on text content
                     h = 0
                     text = ""
@@ -141,8 +151,17 @@ class Layout:
                 for child in node.children:
                     if isinstance(child, DocumentType):
                         continue
-                    if isinstance(child, Element) and child.tag == "head":
-                        continue
+                    if isinstance(child, Element):
+                        # Inherit styles from parent element
+                        if isinstance(node, Element):
+                            parent_styles = node.styles
+                            for key in parent_styles:
+                                if key in self.INHERITED_STYLE_PROPERTIES:
+                                    child.styles.update(parent_styles)
+
+                        # Skip the head tag while recursing
+                        if child.tag == "head":
+                            continue
                     recurse(child, new_node)
 
             if isinstance(node, Element):
@@ -155,7 +174,7 @@ class Layout:
         recurse(node)
 
     def _update_source_view_display_list(
-        self, text: str, x: int, color: str, font: Font
+        self, text: str, x: int, color: str, font: tk_Font
     ):
         """
         Helper method to update the `display_list` for `source_view` method.
@@ -192,7 +211,7 @@ class Layout:
                 DrawText(self.cursor_x, self.cursor_y, buffer, font, color)
             )
 
-    def source_view(self, font: Font, root=None, indent=0):
+    def source_view(self, font: tk_Font, root=None, indent=0):
         """
         Computes the `display_list` for viewing the `HTML` source code in a formatted way.
         """
@@ -280,7 +299,7 @@ class Layout:
                 )
                 self.cursor_y += font.metrics()["linespace"] + self.VSTEP
 
-    def file_view(self, text: str, font: Font):
+    def file_view(self, text: str, font: tk_Font):
         """
         Compute the `display_list` for viewing `file` content in a simple text format.
         """
@@ -306,12 +325,17 @@ class Layout:
         """
         if root.node is not None:
             if isinstance(root.node, Element):
+                external_styles = root.node.styles
                 styles = {}
                 if "style" in root.node.attributes:
                     inline_styles = root.node.attributes["style"]
-                    styles = CSSParser(inline_styles=inline_styles).parse()
+                    css_parser = CSSParser()
+                    css_parser.parse(inline_styles=inline_styles)
+                    styles = css_parser.styles
 
                 bgColor = styles.get("background-color", "transparent")
+                if bgColor == "transparent":
+                    bgColor = external_styles.get("background-color", "transparent")
 
                 self.display_list.append(
                     DrawRect(
@@ -319,17 +343,24 @@ class Layout:
                         root.y,
                         root.width,
                         root.height,
-                        border=None,
-                        backgound=bgColor if bgColor != "transparent" else "black",
+                        border="white",
+                        backgound=bgColor if bgColor != "transparent" else "white",
                     )
                 )
             elif isinstance(root.node, Text):
                 styles = {}
+                external_styles = root.node.parent.styles
                 if "style" in root.node.parent.attributes:
                     inline_styles = root.node.parent.attributes["style"]
-                    styles = CSSParser(inline_styles=inline_styles).parse()
+                    css_parser = CSSParser()
+                    css_parser.parse(inline_styles=inline_styles)
+                    styles = css_parser.styles
 
                 textColor = styles.get("color", "transparent")
+                if textColor == "transparent":
+                    textColor = external_styles.get("color", "transparent")
+
+                font = root.font
 
                 # break the text into lines based on the width
                 text = ""
@@ -339,18 +370,18 @@ class Layout:
                         test_line = text + " " + word
                     else:
                         test_line = word
-                    text_width = root.font.measure(test_line)
+                    text_width = font.measure(test_line)
                     if text_width > self.SCREEN_WIDTH - self.HSTEP:
                         self.display_list.append(
                             DrawText(
                                 root.x,
                                 cursor_y,
                                 text,
-                                root.font,
-                                textColor if textColor != "transparent" else "white",
+                                font,
+                                textColor if textColor != "transparent" else "black",
                             )
                         )
-                        cursor_y += root.font.metrics()["linespace"]
+                        cursor_y += font.metrics()["linespace"]
                         text = word
                     else:
                         text = test_line
@@ -360,8 +391,8 @@ class Layout:
                             root.x,
                             cursor_y,
                             text,
-                            root.font,
-                            textColor if textColor != "transparent" else "white",
+                            font,
+                            textColor if textColor != "transparent" else "black",
                         )
                     )
 

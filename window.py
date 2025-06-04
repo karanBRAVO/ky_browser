@@ -3,6 +3,8 @@ from url import URL
 from html_parser import HTMLParser
 from layout import Layout, print_layout_tree
 from scrollbar import Scrollbar
+import re
+from css_parser import CSSParser
 
 
 class Browser:
@@ -19,9 +21,7 @@ class Browser:
         self.window.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
 
         # Create a canvas for drawing content
-        self.canvas = Canvas(
-            self.window, width=self.WIDTH, height=self.HEIGHT, background="black"
-        )
+        self.canvas = Canvas(self.window, width=self.WIDTH, height=self.HEIGHT)
         self.canvas.pack(fill="both", expand=True)
 
         # content
@@ -103,10 +103,45 @@ class Browser:
     def _clear_canvas(self):
         self.canvas.delete("all")
 
+    def change_canvas_background(self, color: str = "white"):
+        self.canvas.config(background=color)
+
     def load(self, url):
         if url:
             self.url = url
             self.content, self.mediaType = URL(url).request()
+
+    def extract_base_url(self, url: str):
+        pattern = r"^(https?://[^/]+)"
+        match = re.match(pattern, self.url)
+        if match:
+            base_url = match.group(1)
+            return base_url
+        return None
+
+    def load_css(self, links: list[str]):
+        base_url = self.extract_base_url(self.url)
+        if not base_url:
+            return
+
+        # Initialize CSS parser
+        css_parser = CSSParser()
+
+        # load the default browser styles
+        link = "file:///E:/ky_browser/browser.css"
+        content, _ = URL(link).request()
+        css_parser.parse(external_styles=content)
+
+        for link in links:
+            try:
+                if not link.startswith("http"):
+                    link = f"{base_url}/{link.lstrip('/')}"
+                content, mediaType = URL(link).request()
+                if "text/css" in mediaType:
+                    css_parser.parse(external_styles=content)
+            except Exception as e:
+                print(f"Error loading CSS: {e}")
+        return css_parser.styles
 
     def parse(self):
         self.display_list.clear()
@@ -117,15 +152,25 @@ class Browser:
         s = Layout(self.window, self.WIDTH, self.HEIGHT)
 
         if "text/html" in self.mediaType:
-            root = HTMLParser(self.content).parse()
+            html_parser = HTMLParser(self.content)
+            root = html_parser.parse()
 
             if self.url.startswith("view-source:"):
+                self.change_canvas_background("black")
                 s.source_view(self.font, root)
             else:
-                s.layout(root)
+                self.change_canvas_background("white")
+
+                # Extract links from the HTML content
+                html_parser.extract_links(root)
+                styles = self.load_css(html_parser.links.get("css", []))
+
+                # render the HTML content
+                s.layout(root, styles=styles)
                 s.render(s.node)
                 # print_layout_tree(s.node)
         else:
+            self.change_canvas_background("#1c1b22")
             s.file_view(self.content, self.font)
 
         # draw the display list
@@ -148,16 +193,16 @@ class Browser:
 
         for cmd in self.display_list:
             # Optimizations: Don't draw commands outside the visible area
-            # if (
-            #     cmd.y > self.scroll_bar.v_scroll + effective_height
-            #     or cmd.y + self.VSTEP < self.scroll_bar.v_scroll
-            # ):
-            #     continue
-            # if (
-            #     cmd.x > self.scroll_bar.h_scroll + effective_width
-            #     or cmd.x < self.scroll_bar.h_scroll
-            # ):
-            #     continue
+            if (
+                cmd.y > self.scroll_bar.v_scroll + effective_height
+                or cmd.y + self.VSTEP < self.scroll_bar.v_scroll
+            ):
+                continue
+            if (
+                cmd.x > self.scroll_bar.h_scroll + effective_width
+                or cmd.x < self.scroll_bar.h_scroll
+            ):
+                continue
             cmd.execute(self.canvas, self.scroll_bar.h_scroll, self.scroll_bar.v_scroll)
 
         # Draw scrollbars on top of content
@@ -166,11 +211,11 @@ class Browser:
 
 if __name__ == "__main__":
     browser = Browser()
-    # browser.load("https://en.wikipedia.org/wiki/HTML")
+    browser.load("https://browser.engineering/styles.html")
+    # browser.load("view-source:https://en.wikipedia.org/wiki/HTML")
     # browser.load("view-source:https://browser.engineering/html.html")
     # browser.load("view-source:http://localhost:5500/index.html")
     # browser.load("http://localhost:5500/index.html")
-    browser.load("http://localhost:5500/layout.html")
     # browser.load("file:///E:/ky_browser/html_parser.py")
     # browser.load("data:text/html,<h1>Hello World!</h1>")
     # browser.load("https://example.org/index.html")

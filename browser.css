@@ -1,0 +1,87 @@
+body {
+  font-size: 12px;
+  font-weight: 400;
+  color: black;
+  font-family: "Constantia";
+}
+
+h1 {
+  color: black;
+  font-weight: bold;
+  font-size: 28px;
+  font-family: "Cambria";
+}
+
+h2 {
+  color: black;
+  font-weight: bold;
+  font-size: 24px;
+  font-family: "Cambria";
+}
+
+h3 {
+  color: black;
+  font-weight: bold;
+  font-size: 20px;
+  font-family: "Cambria";
+}
+
+h4 {
+  color: black;
+  font-weight: bold;
+  font-size: 16px;
+  font-family: "Cambria";
+}
+
+h5 {
+  color: black;
+  font-size: 12px;
+  font-weight: bold;
+  font-family: "Cambria";
+}
+
+h6 {
+  color: black;
+  font-size: 8px;
+  font-weight: bold;
+  font-family: "Cambria";
+}
+
+a {
+  color: blue;
+  font-family: "Garamond";
+  text-decoration: underline;
+}
+
+blockquote {
+  font-family: "@SimSun-ExtB";
+}
+
+small {
+  font-size: 10px;
+}
+
+strong {
+  font-weight: 900;
+}
+
+b {
+  font-weight: 700;
+}
+
+i {
+  font-style: italic;
+}
+
+u {
+  text-decoration: underline;
+}
+
+em {
+  font-style: italic;
+}
+
+button {
+  background-color: black;
+  color: white;
+}
