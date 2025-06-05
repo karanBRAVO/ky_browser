@@ -34,6 +34,29 @@ class HTMLParser:
             "img": [],
         }
 
+    def extract_title(self, root=None):
+        """
+        Extract the title from the HTML content.
+
+        :return: The title of the document or None if not found.
+        """
+
+        def recurse(node):
+            if isinstance(node, Element) and node.tag == "title":
+                return node.children[0].text if node.children else None
+
+            if isinstance(node, Document) or isinstance(node, Element):
+                for child in node.children:
+                    title = recurse(child)
+                    if title:
+                        return title
+
+            return None
+
+        if root is None:
+            return None
+        return recurse(root)
+
     def _add_link(self, link_type: str, href: str):
         """
         Add a link to the appropriate category.

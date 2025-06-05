@@ -1,10 +1,5 @@
-from tkinter import Tk, Canvas, font
-from download import URL
-from html_parser import HTMLParser
-from layout import Layout, print_layout_tree
-from scrollbar import Scrollbar
-from css_parser import CSSParser
-from url_parser import URLParser
+from tab import Tab
+from tkinter import Tk, Canvas, ttk
 
 
 class Browser:
@@ -14,9 +9,7 @@ class Browser:
 
     WIDTH, HEIGHT = 800, 500
     MIN_WIDTH, MIN_HEIGHT = 400, 300
-    HSTEP, VSTEP = 13, 18
     OS = "WINDOWS"  # or "LINUX", "MACOS"
-    BROWSER_DEFAULT_STYLESHEET = "file:///E:/ky_browser/browser.css"
 
     def __init__(self):
         self.window = Tk()
@@ -25,28 +18,42 @@ class Browser:
         self.window.resizable(True, True)
         self.window.minsize(self.MIN_WIDTH, self.MIN_HEIGHT)
 
-        # Create a canvas for drawing content
-        self.canvas = Canvas(self.window, width=self.WIDTH, height=self.HEIGHT)
-        self.canvas.pack(fill="both", expand=True)
-
-        # content
-        self.url = ""
-        self.content = ""
-        self.mediaType = "text/plain"
-
-        # layout
-        self.display_list = []
-
-        # default font
-        self.font = font.Font(
-            family="Courier",
-            size=14,
-            weight="normal",
-            slant="roman",
+        # browser styles
+        style = ttk.Style()
+        style.theme_use("xpnative")
+        style.configure("Browser.TButton", padding=2, width=3, relief="flat")
+        style.configure(
+            "ActiveTab.TButton",
+            padding=(8, 4),
+            relief="sunken",
+            font=("Segoe UI", 9, "bold"),
+        )
+        style.configure(
+            "Browser.TEntry",
+            padding=5,
+            relief="flat",
+            font=("Segoe UI", 11),
+            borderwidth=2,
+        )
+        # Style for close button
+        style.configure(
+            "CloseTab.TButton",
+            padding=1,
+            width=2,
+            relief="flat",
+            font=("Segoe UI", 8),
         )
 
-        # scrollbar
-        self.scroll_bar = Scrollbar(self.WIDTH, self.HEIGHT)
+        # ui
+        self._setup_ui()
+
+        # tabs
+        self.current_tab_pointer = 0  # pointer to the current tab
+        self.tabs: list[Tab] = []
+        self.tab_buttons: list[ttk.Button] = []
+        self.tab_frames: list[ttk.Frame] = []
+        self.close_buttons: list[ttk.Button] = []
+        self._add_tab()  # add the first tab
 
         # bind events
         self.canvas.bind("<Configure>", self._configure)
@@ -65,159 +72,224 @@ class Browser:
     def _configure(self, event):
         self.WIDTH = event.width
         self.HEIGHT = event.height
-        self.scroll_bar.update_screen_dimensions(self.WIDTH, self.HEIGHT)
-        self.parse()
-        self.draw()
+        for tab in self.tabs:
+            tab._update_screen_dimensions(self.WIDTH, self.HEIGHT)
+        self._update_canvas()
 
     def _mouse_wheel(self, event):
         if self.OS == "WINDOWS":
             scroll_direction = -(event.delta // 120)
             if scroll_direction > 0:
-                self.scroll_bar.scroll_down(self.draw)
+                self._current_tab().scroll_bar.scroll_down()
             else:
-                self.scroll_bar.scroll_up(self.draw)
+                self._current_tab().scroll_bar.scroll_up()
 
     def _left_key_press(self, event):
-        self.scroll_bar.scroll_left(self.draw)
+        self._current_tab().scroll_bar.scroll_left()
 
     def _right_key_press(self, event):
-        self.scroll_bar.scroll_right(self.draw)
+        self._current_tab().scroll_bar.scroll_right()
 
     def _down_key_press(self, event):
-        self.scroll_bar.scroll_down(self.draw)
+        self._current_tab().scroll_bar.scroll_down()
 
     def _up_key_press(self, event):
-        self.scroll_bar.scroll_up(self.draw)
+        self._current_tab().scroll_bar.scroll_up()
 
     def _button_4_press(self, event):
-        self.scroll_bar.scroll_up(self.draw)
+        self._current_tab().scroll_bar.scroll_up()
 
     def _button_5_press(self, event):
-        self.scroll_bar.scroll_down(self.draw)
+        self._current_tab().scroll_bar.scroll_down()
 
     def _button_1_press(self, event):
-        self.scroll_bar.scrollbar_click(event.x, event.y, self.draw)
+        self._current_tab().scroll_bar.scrollbar_click(event.x, event.y)
 
     def _b1_motion(self, event):
-        self.scroll_bar.scrollbar_drag(event.x, event.y, self.draw)
+        self._current_tab().scroll_bar.scrollbar_drag(event.x, event.y)
 
     def _button_release_1(self, event):
-        self.scroll_bar.scrollbar_release()
+        self._current_tab().scroll_bar.scrollbar_release()
 
     def _motion(self, event):
-        self.scroll_bar.scrollbar_hover(event.x, event.y, self.canvas)
+        self._current_tab().scroll_bar.scrollbar_hover(event.x, event.y, self.canvas)
 
-    def _clear_canvas(self):
+    def _update_canvas(self):
+        self._current_tab().parse()
+        self._current_tab().draw()
+
+    def _update_url_entry(self):
+        self.url_entry.delete(0, "end")
+        self.url_entry.insert(0, self._current_tab().url)
+
+    def _add_tab(self):
+        tab = Tab(self.WIDTH, self.HEIGHT, self.canvas)
+        self.tabs.append(tab)
+
+        # Create tab frame to hold both title button and close button
+        tab_frame = ttk.Frame(self.tabbar)
+        self.tab_frames.append(tab_frame)
+
+        tab_index = len(self.tabs) - 1
+
+        # Create tab title button
+        tab_button = ttk.Button(
+            tab_frame,
+            text=tab.title,
+            style="Tab.TButton",
+            command=lambda idx=tab_index: self._switch_tab(idx),
+        )
+
+        # Create close button
+        close_button = ttk.Button(
+            tab_frame,
+            text="×",
+            style="CloseTab.TButton",
+            command=lambda idx=tab_index: self._close_tab(idx),
+        )
+
+        self.tab_buttons.append(tab_button)
+        self.close_buttons.append(close_button)
+
+        # Pack buttons within the frame
+        tab_button.pack(side="left")
+        close_button.pack(side="left")
+
+        # Pack the frame
+        tab_frame.pack(side="left", padx=(0, 2))
+
+        self.current_tab_pointer = tab_index
+        self._update_tab_styles()
+        self._update_url_entry()
         self.canvas.delete("all")
 
-    def change_canvas_background(self, color: str = "white"):
-        self.canvas.config(background=color)
+    def _close_tab(self, tab_index):
+        if len(self.tabs) <= 1:
+            self._add_tab()
 
-    def load(self, url):
-        if url:
-            print(f"Loading URL: {url}")
-            self.url = url
-            self.content, self.mediaType = URL(url).request()
-        print(f"Parsing content...")
-        self.parse()
-        print(f"Content loaded successfully.")
-        self.draw()
+        if 0 <= tab_index < len(self.tabs):
+            # Remove the tab and its UI elements
+            self.tabs.pop(tab_index)
+            self.tab_buttons.pop(tab_index)
+            self.close_buttons.pop(tab_index)
 
-    def load_css(self, links: list[str]):
-        print(f"Loading CSS...")
-        base_url = URLParser().extract_base_url(self.url)
-        if not base_url:
-            return
+            # Destroy the tab frame
+            tab_frame = self.tab_frames.pop(tab_index)
+            tab_frame.destroy()
 
-        # Initialize CSS parser
-        css_parser = CSSParser()
-
-        # load the default browser styles
-        link = self.BROWSER_DEFAULT_STYLESHEET
-        content, _ = URL(link).request()
-        css_parser.parse(external_styles=content)
-
-        # load external stylesheets
-        for link in links:
-            try:
-                idx = link.find("http")
-                if idx == -1:
-                    link = f"{base_url}/{link.lstrip('/')}"
+            # Adjust current tab pointer
+            if tab_index <= self.current_tab_pointer:
+                if self.current_tab_pointer > 0:
+                    self.current_tab_pointer -= 1
                 else:
-                    link = link[idx:]
-                content, mediaType = URL(link).request()
-                if "text/css" in mediaType:
-                    css_parser.parse(external_styles=content)
-            except Exception as e:
-                print(f"Error loading CSS: {e}")
+                    self.current_tab_pointer = 0
 
-        print(f"CSS loaded successfully.")
-        return css_parser.styles
+            # Update tab button commands with new indices
+            self._update_tab_commands()
 
-    def parse(self):
-        self.display_list.clear()
+            # Update UI
+            self._update_tab_styles()
+            self._update_canvas()
+            self._update_url_entry()
 
-        if not self.content or not self.url:
-            return
+    def _update_tab_commands(self):
+        for i, (tab_button, close_button) in enumerate(
+            zip(self.tab_buttons, self.close_buttons)
+        ):
+            tab_button.configure(command=lambda idx=i: self._switch_tab(idx))
+            close_button.configure(command=lambda idx=i: self._close_tab(idx))
 
-        s = Layout(self.window, self.WIDTH, self.HEIGHT)
+    def _switch_tab(self, tab_index):
+        if 0 <= tab_index < len(self.tabs):
+            self.current_tab_pointer = tab_index
+            self._update_tab_styles()
+            self._update_canvas()
+            self._update_url_entry()
 
-        if "text/html" in self.mediaType:
-            html_parser = HTMLParser(self.content)
-            root = html_parser.parse()
-
-            if self.url.startswith("view-source:"):
-                self.change_canvas_background("black")
-                s.source_view(self.font, root)
+    def _update_tab_styles(self):
+        for i, button in enumerate(self.tab_buttons):
+            if i == self.current_tab_pointer:
+                button.configure(style="ActiveTab.TButton")
             else:
-                self.change_canvas_background("white")
+                button.configure(style="Tab.TButton")
 
-                # Extract links from the HTML content
-                html_parser.extract_links(root)
-                styles = self.load_css(html_parser.links.get("css", []))
+    def _update_tab_title(self, title: str):
+        if title and self.current_tab_pointer < len(self.tab_buttons):
+            title = title[:10] + "..." if len(title) > 10 else title
+            self.tab_buttons[self.current_tab_pointer].configure(text=title)
 
-                # render the HTML content
-                s.layout(root, styles=styles)
-                s.render(s.node)
-                # print_layout_tree(s.node)
-        else:
-            self.change_canvas_background("#1c1b22")
-            s.file_view(self.content, self.font)
+    def _current_tab(self):
+        return self.tabs[self.current_tab_pointer]
 
-        # draw the display list
-        self.display_list = s.display_list
-        self.draw()
+    def _setup_ui(self):
+        self._create_canvas()
+        self._create_navbar()
+        self._create_tabbar()
 
-    def draw(self):
-        self._clear_canvas()
+        # pack the ui elements
+        self.navbar.pack(fill="x")
+        self.back_btn.pack(side="left", padx=2)
+        self.forward_btn.pack(side="left", padx=2)
+        self.reload_btn.pack(side="left", padx=2)
+        self.url_entry.pack(side="left", fill="x", expand=True, padx=2)
+        self.go_btn.pack(side="left", padx=2)
 
-        # calculate scroll limits
-        self.scroll_bar.calc_max_scroll(self.display_list, self.font)
+        self.tabbar.pack(fill="x")
+        self.new_tab_button.pack(side="left", padx=2)
 
-        # Calculate effective display area (excluding scrollbars)
-        effective_width = self.WIDTH - (
-            self.scroll_bar.SCROLLBAR_WIDTH if self.scroll_bar.MAX_V_SCROLL > 0 else 0
+        self.canvas.pack(fill="both", expand=True)
+
+    def _create_canvas(self):
+        self.canvas = Canvas(self.window, width=self.WIDTH, height=self.HEIGHT)
+
+    def _create_tabbar(self):
+        self.tabbar = ttk.Frame(self.window, padding=5)
+
+        self.new_tab_button = ttk.Button(
+            self.tabbar,
+            text="+",
+            style="Browser.TButton",
+            command=self._add_tab,
         )
-        effective_height = self.HEIGHT - (
-            self.scroll_bar.SCROLLBAR_WIDTH if self.scroll_bar.MAX_H_SCROLL > 0 else 0
+
+    def _create_navbar(self):
+        self.navbar = ttk.Frame(self.window, padding=5)
+
+        self.back_btn = ttk.Button(
+            self.navbar,
+            text="←",
+            style="Browser.TButton",
+            command=lambda: print(f"Back Button Pressed"),
         )
 
-        for cmd in self.display_list:
-            # Optimizations: Don't draw commands outside the visible area
-            if (
-                cmd.y > self.scroll_bar.v_scroll + effective_height
-                or cmd.y + self.VSTEP < self.scroll_bar.v_scroll
-            ):
-                continue
-            if (
-                cmd.x > self.scroll_bar.h_scroll + effective_width
-                or cmd.x < self.scroll_bar.h_scroll
-            ):
-                continue
-            cmd.execute(self.canvas, self.scroll_bar.h_scroll, self.scroll_bar.v_scroll)
+        self.forward_btn = ttk.Button(
+            self.navbar,
+            text="→",
+            style="Browser.TButton",
+            command=self.load,
+        )
 
-        # Draw scrollbars on top of content
-        self.scroll_bar.draw_scrollbars(self.canvas)
+        self.reload_btn = ttk.Button(
+            self.navbar,
+            text="⟳",
+            style="Browser.TButton",
+            command=self.load,
+        )
+
+        self.url_entry = ttk.Entry(self.navbar, style="Browser.TEntry")
+
+        self.go_btn = ttk.Button(
+            self.navbar,
+            text="Go",
+            style="Browser.TButton",
+            command=self.load,
+        )
+
+    def load(self, url=None):
+        url = url if url is not None else self.url_entry.get()
+        if url:
+            self._current_tab().load(url)
+            self._update_tab_title(self._current_tab().title)
 
 
 if __name__ == "__main__":
@@ -226,7 +298,7 @@ if __name__ == "__main__":
     # browser.load("view-source:https://en.wikipedia.org/wiki/HTML")
     # browser.load("view-source:https://browser.engineering/html.html")
     # browser.load("view-source:http://localhost:5500/index.html")
-    browser.load("http://localhost:5500/index.html")
+    # browser.load("http://localhost:5500/index.html")
     # browser.load("file:///E:/ky_browser/html_parser.py")
     # browser.load("data:text/html,<h1>Hello World!</h1>")
     # browser.load("https://example.org/index.html")

@@ -14,7 +14,7 @@ class Scrollbar:
     SCROLLBAR_THUMB_COLOR = "#888888"
     SCROLLBAR_THUMB_HOVER_COLOR = "#AAAAAA"
 
-    def __init__(self, screen_width: int, screen_height: int):
+    def __init__(self, screen_width: int, screen_height: int, draw_callback=None):
         self.SCREEN_WIDTH = screen_width
         self.SCREEN_HEIGHT = screen_height
         self.v_scroll = 0
@@ -27,41 +27,51 @@ class Scrollbar:
         self.drag_start_x = 0
         self.drag_start_scroll = 0
 
+        self.draw_callback = draw_callback
+
     def update_screen_dimensions(self, screen_width: int, screen_height: int):
         self.SCREEN_WIDTH = screen_width
         self.SCREEN_HEIGHT = screen_height
 
-    def scroll_left(self, func=None):
+    def scroll_left(
+        self,
+    ):
         if self.h_scroll - self.SCROLL_STEP < self.MIN_H_SCROLL:
             self.h_scroll = self.MIN_H_SCROLL
         else:
             self.h_scroll -= self.SCROLL_STEP
-        if func:
-            func()
+        if self.draw_callback:
+            self.draw_callback()
 
-    def scroll_right(self, func=None):
+    def scroll_right(
+        self,
+    ):
         if self.h_scroll + self.SCROLL_STEP > self.MAX_H_SCROLL:
             self.h_scroll = self.MAX_H_SCROLL
         else:
             self.h_scroll += self.SCROLL_STEP
-        if func:
-            func()
+        if self.draw_callback:
+            self.draw_callback()
 
-    def scroll_down(self, func=None):
+    def scroll_down(
+        self,
+    ):
         if self.v_scroll + self.SCROLL_STEP > self.MAX_V_SCROLL:
             self.v_scroll = self.MAX_V_SCROLL
         else:
             self.v_scroll += self.SCROLL_STEP
-        if func:
-            func()
+        if self.draw_callback:
+            self.draw_callback()
 
-    def scroll_up(self, func=None):
+    def scroll_up(
+        self,
+    ):
         if self.v_scroll - self.SCROLL_STEP < self.MIN_V_SCROLL:
             self.v_scroll = self.MIN_V_SCROLL
         else:
             self.v_scroll -= self.SCROLL_STEP
-        if func:
-            func()
+        if self.draw_callback:
+            self.draw_callback()
 
     def get_v_scrollbar_bounds(self):
         if self.MAX_V_SCROLL <= 0:
@@ -122,7 +132,11 @@ class Scrollbar:
             rect_x <= x <= rect_x + rect_width and rect_y <= y <= rect_y + rect_height
         )
 
-    def scrollbar_click(self, x: int, y: int, func=None):
+    def scrollbar_click(
+        self,
+        x: int,
+        y: int,
+    ):
         # Check vertical scrollbar
         v_bounds = self.get_v_scrollbar_bounds()
         if v_bounds:
@@ -143,8 +157,8 @@ class Scrollbar:
                 self.v_scroll = max(
                     self.MIN_V_SCROLL, min(self.MAX_V_SCROLL, new_scroll)
                 )
-                if func:
-                    func()
+                if self.draw_callback:
+                    self.draw_callback()
                 return
 
         # Check horizontal scrollbar
@@ -167,11 +181,15 @@ class Scrollbar:
                 self.h_scroll = max(
                     self.MIN_H_SCROLL, min(self.MAX_H_SCROLL, new_scroll)
                 )
-                if func:
-                    func()
+                if self.draw_callback:
+                    self.draw_callback()
                 return
 
-    def scrollbar_drag(self, x: int, y: int, func=None):
+    def scrollbar_drag(
+        self,
+        x: int,
+        y: int,
+    ):
         if self.dragging_v_scrollbar:
             v_bounds = self.get_v_scrollbar_bounds()
             if v_bounds:
@@ -189,8 +207,8 @@ class Scrollbar:
                     self.v_scroll = max(
                         self.MIN_V_SCROLL, min(self.MAX_V_SCROLL, int(new_scroll))
                     )
-                    if func:
-                        func()
+                    if self.draw_callback:
+                        self.draw_callback()
 
         elif self.dragging_h_scrollbar:
             h_bounds = self.get_h_scrollbar_bounds()
@@ -209,8 +227,8 @@ class Scrollbar:
                     self.h_scroll = max(
                         self.MIN_H_SCROLL, min(self.MAX_H_SCROLL, int(new_scroll))
                     )
-                    if func:
-                        func()
+                    if self.draw_callback:
+                        self.draw_callback()
 
     def scrollbar_release(self):
         self.dragging_v_scrollbar = False

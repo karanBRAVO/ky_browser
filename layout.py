@@ -70,8 +70,7 @@ class Layout:
         "font-style",
     ]
 
-    def __init__(self, window, screen_width: int, screen_height: int):
-        self.window = window
+    def __init__(self, screen_width: int, screen_height: int):
         self.node = None
         self.SCREEN_WIDTH = screen_width
         self.SCREEN_HEIGHT = screen_height
@@ -270,8 +269,6 @@ class Layout:
         if isinstance(root, Text):
             if root.parent and root.parent.tag == "title":
                 text = root.text.strip()
-                if text:
-                    self.window.title(text)
             else:
                 text = root.text
                 self._update_source_view_display_list(text, indent, "white", font)

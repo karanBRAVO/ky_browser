@@ -1,0 +1,170 @@
+from font import Font
+from download import URL
+from tkinter import Canvas
+from scrollbar import Scrollbar
+from css_parser import CSSParser
+from url_parser import URLParser
+from html_parser import HTMLParser
+from layout import Layout, print_layout_tree
+
+
+class Tab:
+    """
+    Represents a browser tab that can load and display content from a URL.
+    """
+
+    HSTEP, VSTEP = 13, 18
+    BROWSER_DEFAULT_STYLESHEET = "file:///E:/ky_browser/browser.css"
+
+    def __init__(
+        self,
+        screen_width: int,
+        screen_height: int,
+        canvas: Canvas,
+        title: str = "New Tab",
+    ):
+        # canvas
+        self.canvas = canvas
+
+        # scrollbar
+        self.scroll_bar = Scrollbar(screen_width, screen_height, self.draw)
+
+        # title
+        self.title = title
+
+        # content
+        self.url = ""
+        self.content = ""
+        self.mediaType = "text/plain"
+
+        # layout
+        self.display_list = []
+
+        # default font
+        self.font = Font().get_font()
+
+        # dimensions
+        self.WIDTH = screen_width
+        self.HEIGHT = screen_height
+
+    def _update_screen_dimensions(self, screen_width: int, screen_height: int):
+        self.WIDTH = screen_width
+        self.HEIGHT = screen_height
+        self.scroll_bar.update_screen_dimensions(self.WIDTH, self.HEIGHT)
+
+    def _change_canvas_background(self, color: str = "white"):
+        self.canvas.config(background=color)
+
+    def _clear_canvas(self):
+        self.canvas.delete("all")
+
+    def load(self, url: str):
+        if url:
+            # download the content from the URL
+            self.url = url
+            self.content, self.mediaType = URL(url).request()
+            # parse the loaded content
+            self.parse()
+            # draw the content on the canvas
+            self.draw()
+
+    def load_css(self, links: list[str]):
+        base_url = URLParser().extract_base_url(self.url)
+
+        # Initialize CSS parser
+        css_parser = CSSParser()
+
+        # load the default browser styles
+        link = self.BROWSER_DEFAULT_STYLESHEET
+        content, _ = URL(link).request()
+        css_parser.parse(external_styles=content)
+
+        # load external stylesheets
+        for link in links:
+            try:
+                idx = link.find("http")
+                if idx == -1:
+                    link = f"{base_url}/{link.lstrip('/')}"
+                else:
+                    link = link[idx:]
+                content, mediaType = URL(link).request()
+                if "text/css" in mediaType:
+                    css_parser.parse(external_styles=content)
+            except Exception as e:
+                print(f"Error loading CSS: {e}")
+        return css_parser.styles
+
+    def parse(self):
+        self.display_list.clear()
+
+        if not self.content or not self.url:
+            return
+
+        lTree = Layout(self.WIDTH, self.HEIGHT)
+
+        if "text/html" in self.mediaType:
+            html_parser = HTMLParser(self.content)
+            root = html_parser.parse()
+
+            if self.url.startswith("view-source:"):
+                self._change_canvas_background("black")
+                self.title = self.url
+                lTree.source_view(self.font, root)
+            else:
+                self._change_canvas_background("white")
+                if self.url.startswith("data:text/html"):
+                    self.title = self.url
+                else:
+                    title = html_parser.extract_title(root)
+                    if title is None:
+                        self.title = URLParser().extract_base_url(self.url)
+                    else:
+                        self.title = title
+
+                # Extract links from the HTML content
+                html_parser.extract_links(root)
+                styles = self.load_css(html_parser.links.get("css", []))
+
+                # render the HTML content
+                lTree.layout(root, styles=styles)
+                lTree.render(lTree.node)
+                # print_layout_tree(s.node)
+        else:
+            self._change_canvas_background("#1c1b22")
+            self.title = self.url
+            lTree.file_view(self.content, self.font)
+
+        # draw the display list
+        self.display_list = lTree.display_list
+        self.draw()
+
+    def draw(self):
+        self._clear_canvas()
+
+        # calculate scroll limits
+        self.scroll_bar.calc_max_scroll(self.display_list, self.font)
+
+        # Calculate effective display area (excluding scrollbars)
+        effective_width = self.WIDTH - (
+            self.scroll_bar.SCROLLBAR_WIDTH if self.scroll_bar.MAX_V_SCROLL > 0 else 0
+        )
+        effective_height = self.HEIGHT - (
+            self.scroll_bar.SCROLLBAR_WIDTH if self.scroll_bar.MAX_H_SCROLL > 0 else 0
+        )
+
+        for cmd in self.display_list:
+            # Optimizations: Don't draw commands outside the visible area
+            if (
+                cmd.y > self.scroll_bar.v_scroll + effective_height
+                or cmd.y + self.VSTEP < self.scroll_bar.v_scroll
+            ):
+                continue
+            if (
+                cmd.x > self.scroll_bar.h_scroll + effective_width
+                or cmd.x < self.scroll_bar.h_scroll
+            ):
+                continue
+            cmd.execute(self.canvas, self.scroll_bar.h_scroll, self.scroll_bar.v_scroll)
+
+        # Draw scrollbars on top of content
+        self.scroll_bar.draw_scrollbars(self.canvas)
