@@ -1,5 +1,7 @@
 from tab import Tab
+from dialogue_box import DialogBox
 from tkinter import Tk, Canvas, ttk
+from bookmarks_manager import BookmarksManager
 
 
 class Browser:
@@ -43,6 +45,10 @@ class Browser:
             relief="flat",
             font=("Segoe UI", 8),
         )
+        style.configure(
+            "Overlay.TFrame", background="white", relief="raised", borderwidth=2
+        )
+        style.configure("OverlayTop.TFrame", background="white")
 
         # ui
         self._setup_ui()
@@ -54,6 +60,9 @@ class Browser:
         self.tab_frames: list[ttk.Frame] = []
         self.close_buttons: list[ttk.Button] = []
         self._add_tab()  # add the first tab
+
+        # bookmarks manager
+        self.bookmark_manager = BookmarksManager()
 
         # bind events
         self.canvas.bind("<Configure>", self._configure)
@@ -87,6 +96,134 @@ class Browser:
         self.window.bind("<Control-l>", lambda _: self._focus_url_entry())
         self.window.bind("<Control-r>", lambda _: self.load())
         self.window.bind("<F5>", lambda _: self.load())
+        self.window.bind("<Escape>", lambda _: self._hide_overlay())
+        self.window.bind("<Control-b>", lambda _: self._open_bookmark_pane())
+        self.window.bind("<Control-d>", lambda _: self._add_new_bookmark())
+
+    def _add_new_bookmark(self):
+        def on_submit(name, url):
+            if name and url:
+                self.bookmark_manager.save_bookmark(name, url)
+
+        curr_title = self._current_tab().title
+        curr_url = self._current_tab().url
+
+        DialogBox(
+            self.window,
+            "Add Bookmark",
+            "Name",
+            curr_title,
+            "URL",
+            curr_url,
+            on_submit=on_submit,
+        )
+
+    def _open_bookmark_pane(self):
+        self._toggle_overlay()
+        self.overlay_label.configure(text="Bookmark Pane")
+
+        for widget in self.overlay.winfo_children():
+            if widget not in {
+                self.overlay_top_frame,
+                self.overlay_close_btn,
+                self.overlay_label,
+            }:
+                widget.destroy()
+
+        canvas = Canvas(self.overlay, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.overlay, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        bFrame = ttk.Frame(canvas)
+        bFrame.pack(fill="both", expand=True)
+        canvas.create_window((0, 0), window=bFrame, anchor="nw")
+
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        bFrame.bind("<Configure>", on_frame_configure)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta // 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        bookmarks = self.bookmark_manager.load_bookmarks()
+
+        if not bookmarks:
+            no_bookmarks_label = ttk.Label(
+                bFrame, text="No bookmarks found.", font=("Segoe UI", 12)
+            )
+            no_bookmarks_label.pack(pady=20)
+        else:
+            for name, url in bookmarks.items():
+                bookmark_btn = ttk.Button(
+                    bFrame,
+                    text=name[:10] + "..." if len(name) > 10 else name,
+                    command=lambda u=url: self.load(u),
+                )
+                bookmark_url_label = ttk.Label(
+                    bFrame,
+                    text=url[:100] if len(url) > 100 else url,
+                    font=("Segoe UI", 8),
+                    foreground="blue",
+                )
+                bookmark_btn.pack(anchor="w", padx=10, pady=2)
+                bookmark_url_label.pack(anchor="w", padx=10, pady=2)
+
+    def _toggle_overlay(self):
+        if self.overlay_visible:
+            self._hide_overlay()
+        else:
+            self._show_overlay()
+
+    def _show_overlay(self):
+        self.overlay.lift()
+        self.overlay_visible = True
+
+    def _hide_overlay(self):
+        self.overlay.lower()
+        self.overlay_visible = False
+
+    def _create_overlay(self):
+        self.overlay = ttk.Frame(self.window, style="Overlay.TFrame", padding=10)
+
+        self.overlay_top_frame = ttk.Frame(
+            self.overlay, padding=5, style="OverlayTop.TFrame"
+        )
+
+        self.overlay_label = ttk.Label(
+            self.overlay_top_frame,
+            text="Overlay Content",
+            font=("Segoe UI", 12),
+            background="white",
+        )
+
+        self.overlay_close_btn = ttk.Button(
+            self.overlay_top_frame,
+            text="×",
+            style="CloseTab.TButton",
+            command=self._hide_overlay,
+        )
+
+        self._hide_overlay()
+
+        self.overlay.place(
+            relx=0.5,
+            rely=0.5,
+            anchor="center",
+            width=self.WIDTH - 50,
+            height=self.HEIGHT - 50,
+        )
+        self.overlay_top_frame.pack(fill="x")
+        self.overlay_label.pack(side="left", padx=2, anchor="nw")
+        self.overlay_close_btn.pack(side="right", padx=2, anchor="ne")
+
+    def _update_overlay_dimensions(self):
+        self.overlay.place_configure(width=self.WIDTH - 50, height=self.HEIGHT - 50)
 
     def _configure(self, event):
         self.WIDTH = event.width
@@ -94,6 +231,7 @@ class Browser:
         for tab in self.tabs:
             tab._update_screen_dimensions(self.WIDTH, self.HEIGHT)
         self._update_canvas()
+        self._update_overlay_dimensions()
 
     def _mouse_wheel(self, event):
         if self.OS == "WINDOWS":
@@ -248,6 +386,7 @@ class Browser:
         self._create_canvas()
         self._create_navbar()
         self._create_tabbar()
+        self._create_overlay()
 
         # pack the ui elements
         self.navbar.pack(fill="x")
@@ -300,6 +439,7 @@ class Browser:
         )
 
         self.url_entry = ttk.Entry(self.navbar, style="Browser.TEntry")
+        self.url_entry.bind("<Return>", lambda event: self.load())
 
         self.go_btn = ttk.Button(
             self.navbar,
@@ -313,6 +453,7 @@ class Browser:
         if url:
             self._current_tab().load(url)
             self._update_tab_title(self._current_tab().title)
+            self._update_url_entry()
 
 
 if __name__ == "__main__":
