@@ -3,8 +3,8 @@ from download import URL
 from html_parser import HTMLParser
 from layout import Layout, print_layout_tree
 from scrollbar import Scrollbar
-import re
 from css_parser import CSSParser
+from url_parser import URLParser
 
 
 class Browser:
@@ -16,6 +16,7 @@ class Browser:
     MIN_WIDTH, MIN_HEIGHT = 400, 300
     HSTEP, VSTEP = 13, 18
     OS = "WINDOWS"  # or "LINUX", "MACOS"
+    BROWSER_DEFAULT_STYLESHEET = "file:///E:/ky_browser/browser.css"
 
     def __init__(self):
         self.window = Tk()
@@ -35,6 +36,8 @@ class Browser:
 
         # layout
         self.display_list = []
+
+        # default font
         self.font = font.Font(
             family="Courier",
             size=14,
@@ -120,17 +123,9 @@ class Browser:
         print(f"Content loaded successfully.")
         self.draw()
 
-    def extract_base_url(self, url: str):
-        pattern = r"^(https?://[^/]+)"
-        match = re.match(pattern, self.url)
-        if match:
-            base_url = match.group(1)
-            return base_url
-        return None
-
     def load_css(self, links: list[str]):
         print(f"Loading CSS...")
-        base_url = self.extract_base_url(self.url)
+        base_url = URLParser().extract_base_url(self.url)
         if not base_url:
             return
 
@@ -138,10 +133,11 @@ class Browser:
         css_parser = CSSParser()
 
         # load the default browser styles
-        link = "file:///E:/ky_browser/browser.css"
+        link = self.BROWSER_DEFAULT_STYLESHEET
         content, _ = URL(link).request()
         css_parser.parse(external_styles=content)
 
+        # load external stylesheets
         for link in links:
             try:
                 idx = link.find("http")
@@ -154,6 +150,7 @@ class Browser:
                     css_parser.parse(external_styles=content)
             except Exception as e:
                 print(f"Error loading CSS: {e}")
+
         print(f"CSS loaded successfully.")
         return css_parser.styles
 
