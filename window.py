@@ -69,6 +69,25 @@ class Browser:
         self.canvas.bind("<ButtonRelease-1>", self._button_release_1)
         self.canvas.bind("<Motion>", self._motion)
 
+        self._browser_shortcuts()
+
+    def _browser_shortcuts(self):
+        self.window.bind("<Control-n>", lambda _: self._add_tab())
+        self.window.bind(
+            "<Control-w>", lambda _: self._close_tab(self.current_tab_pointer)
+        )
+        self.window.bind(
+            "<Control-Tab>",
+            lambda _: self._switch_tab((self.current_tab_pointer + 1) % len(self.tabs)),
+        )
+        self.window.bind(
+            "<Control-Shift-Tab>",
+            lambda _: self._switch_tab((self.current_tab_pointer - 1) % len(self.tabs)),
+        )
+        self.window.bind("<Control-l>", lambda _: self._focus_url_entry())
+        self.window.bind("<Control-r>", lambda _: self.load())
+        self.window.bind("<F5>", lambda _: self.load())
+
     def _configure(self, event):
         self.WIDTH = event.width
         self.HEIGHT = event.height
@@ -122,6 +141,10 @@ class Browser:
         self.url_entry.delete(0, "end")
         self.url_entry.insert(0, self._current_tab().url)
 
+    def _focus_url_entry(self):
+        self.url_entry.focus_set()
+        self.url_entry.select_range(0, "end")
+
     def _add_tab(self):
         tab = Tab(self.WIDTH, self.HEIGHT, self.canvas)
         self.tabs.append(tab)
@@ -163,7 +186,7 @@ class Browser:
         self._update_url_entry()
         self.canvas.delete("all")
 
-    def _close_tab(self, tab_index):
+    def _close_tab(self, tab_index: int):
         if len(self.tabs) <= 1:
             self._add_tab()
 
