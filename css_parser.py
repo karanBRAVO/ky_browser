@@ -74,46 +74,62 @@ class CSSParser:
                     self.styles[key] = value
         except Exception:
             print("Error parsing inline styles.")
-            self.styles.clear()
 
     def _parse_external_styles(self, styles: str):
         styles = self.format_styles(styles)
 
-        selector = ""
+        selectors = []
         buffer = ""
         key = ""
         value = ""
         try:
             for char in styles:
-                if char == "{":
+                if char == "," and not key and not value:
                     selector = buffer.strip()
+                    if selector:
+                        selectors.append(selector)
+                    buffer = ""
+                elif char == "{":
+                    selector = buffer.strip()
+                    if selector:
+                        selectors.append(selector)
                     buffer = ""
                 elif char == ":":
                     key = buffer.strip()
                     buffer = ""
-                    if selector and key:
-                        self.styles.setdefault(selector, {})[key] = ""
+                    if key:
+                        for selector in selectors:
+                            self.styles.setdefault(selector, {})[key] = ""
                 elif char == ";":
                     value = buffer.strip()
                     buffer = ""
-                    if selector and key and value:
-                        self.styles[selector][key] = value
+                    if key and value:
+                        for selector in selectors:
+                            self.styles[selector][key] = value
                 elif char == "}":
                     value = buffer.strip()
                     buffer = ""
-                    if selector and key and value:
-                        self.styles[selector][key] = value
+                    if key and value:
+                        for selector in selectors:
+                            self.styles[selector][key] = value
+                    selectors.clear()
+                    key = ""
+                    value = ""
                 else:
                     if char == '"' or char == "'":
                         continue
                     buffer += char
             if buffer:
                 value = buffer.strip()
-                if selector and key and value:
-                    self.styles[selector][key] = value
-        except Exception:
-            print("Error parsing external styles.")
-            self.styles.clear()
+                if key and value:
+                    for selector in selectors:
+                        self.styles[selector][key] = value
+                selectors.clear()
+                key = ""
+                value = ""
+                buffer = ""
+        except Exception as e:
+            print("Error parsing external styles.", e)
 
     def format_styles(self, text: str):
         text = re.sub(r"\n(?=\S)", " ", text)

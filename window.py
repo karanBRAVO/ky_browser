@@ -134,8 +134,11 @@ class Browser:
 
         for link in links:
             try:
-                if not link.startswith("http"):
+                idx = link.find("http")
+                if idx == -1:
                     link = f"{base_url}/{link.lstrip('/')}"
+                else:
+                    link = link[idx:]
                 content, mediaType = URL(link).request()
                 if "text/css" in mediaType:
                     css_parser.parse(external_styles=content)
