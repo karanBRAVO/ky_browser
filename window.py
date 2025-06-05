@@ -1,5 +1,5 @@
 from tkinter import Tk, Canvas, font
-from url import URL
+from download import URL
 from html_parser import HTMLParser
 from layout import Layout, print_layout_tree
 from scrollbar import Scrollbar
@@ -8,6 +8,10 @@ from css_parser import CSSParser
 
 
 class Browser:
+    """
+    A web browser that can render HTML and CSS content.
+    """
+
     WIDTH, HEIGHT = 800, 500
     MIN_WIDTH, MIN_HEIGHT = 400, 300
     HSTEP, VSTEP = 13, 18
@@ -108,8 +112,13 @@ class Browser:
 
     def load(self, url):
         if url:
+            print(f"Loading URL: {url}")
             self.url = url
             self.content, self.mediaType = URL(url).request()
+        print(f"Parsing content...")
+        self.parse()
+        print(f"Content loaded successfully.")
+        self.draw()
 
     def extract_base_url(self, url: str):
         pattern = r"^(https?://[^/]+)"
@@ -120,6 +129,7 @@ class Browser:
         return None
 
     def load_css(self, links: list[str]):
+        print(f"Loading CSS...")
         base_url = self.extract_base_url(self.url)
         if not base_url:
             return
@@ -144,6 +154,7 @@ class Browser:
                     css_parser.parse(external_styles=content)
             except Exception as e:
                 print(f"Error loading CSS: {e}")
+        print(f"CSS loaded successfully.")
         return css_parser.styles
 
     def parse(self):
@@ -214,11 +225,11 @@ class Browser:
 
 if __name__ == "__main__":
     browser = Browser()
-    browser.load("https://browser.engineering/styles.html")
+    # browser.load("https://browser.engineering/styles.html")
     # browser.load("view-source:https://en.wikipedia.org/wiki/HTML")
     # browser.load("view-source:https://browser.engineering/html.html")
     # browser.load("view-source:http://localhost:5500/index.html")
-    # browser.load("http://localhost:5500/index.html")
+    browser.load("http://localhost:5500/index.html")
     # browser.load("file:///E:/ky_browser/html_parser.py")
     # browser.load("data:text/html,<h1>Hello World!</h1>")
     # browser.load("https://example.org/index.html")
