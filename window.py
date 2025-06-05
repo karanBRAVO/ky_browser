@@ -1,5 +1,6 @@
 from tab import Tab
 from dialogue_box import DialogBox
+from utils import load_json
 from tkinter import Tk, Canvas, ttk
 from bookmarks_manager import BookmarksManager
 
@@ -81,7 +82,7 @@ class Browser:
         self._browser_shortcuts()
 
     def _browser_shortcuts(self):
-        self.window.bind("<Control-n>", lambda _: self._add_tab())
+        self.window.bind("<Control-t>", lambda _: self._add_tab())
         self.window.bind(
             "<Control-w>", lambda _: self._close_tab(self.current_tab_pointer)
         )
@@ -99,6 +100,61 @@ class Browser:
         self.window.bind("<Escape>", lambda _: self._hide_overlay())
         self.window.bind("<Control-b>", lambda _: self._open_bookmark_pane())
         self.window.bind("<Control-d>", lambda _: self._add_new_bookmark())
+        self.window.bind("<Control-/>", lambda _: self._open_shortcuts_pane())
+
+    def _open_shortcuts_pane(self):
+        self._toggle_overlay()
+        self.overlay_label.configure(text="Shortcuts")
+
+        self._clear_overlay_content()
+
+        canvas = Canvas(self.overlay, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.overlay, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        shortcuts_frame = ttk.Frame(canvas)
+        shortcuts_frame.pack(fill="both", expand=True)
+        canvas.create_window((0, 0), window=shortcuts_frame, anchor="nw")
+
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        shortcuts_frame.bind("<Configure>", on_frame_configure)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta // 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        shortcuts = load_json("shortcuts.json")
+        if shortcuts is None or not shortcuts:
+            no_shortcuts_label = ttk.Label(
+                shortcuts_frame, text="No shortcuts found.", font=("Lucida Console", 12)
+            )
+            no_shortcuts_label.pack(pady=20)
+        else:
+            for i, (key, desc) in enumerate(shortcuts.items()):
+                desc_label = ttk.Label(
+                    shortcuts_frame, text=desc, font=("Segoe UI", 10)
+                )
+                key_label = ttk.Label(
+                    shortcuts_frame, text=key, font=("Lucida Console", 10, "bold")
+                )
+
+                desc_label.grid(row=i, column=0, sticky="w", padx=(10, 30), pady=2)
+                key_label.grid(row=i, column=1, sticky="e", padx=(0, 10), pady=2)
+
+    def _clear_overlay_content(self):
+        for widget in self.overlay.winfo_children():
+            if widget not in {
+                self.overlay_top_frame,
+                self.overlay_close_btn,
+                self.overlay_label,
+            }:
+                widget.destroy()
 
     def _add_new_bookmark(self):
         def on_submit(name, url):
@@ -122,13 +178,7 @@ class Browser:
         self._toggle_overlay()
         self.overlay_label.configure(text="Bookmark Pane")
 
-        for widget in self.overlay.winfo_children():
-            if widget not in {
-                self.overlay_top_frame,
-                self.overlay_close_btn,
-                self.overlay_label,
-            }:
-                widget.destroy()
+        self._clear_overlay_content()
 
         canvas = Canvas(self.overlay, borderwidth=0, highlightthickness=0)
         scrollbar = ttk.Scrollbar(self.overlay, orient="vertical", command=canvas.yview)

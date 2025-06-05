@@ -1,0 +1,13 @@
+{
+  "Ctrl+t": "Add and Switch to New Tab",
+  "Ctrl+w": "Close Current Tab",
+  "Ctrl+Tab": "Switch to Next Tab",
+  "Ctrl+Shift+Tab": "Switch to Previous Tab",
+  "Ctrl+l": "Focus Address Bar",
+  "Ctrl+r": "Reload Current Page",
+  "F5": "Reload Current Page",
+  "Ctrl+b": "Toggle Bookmarks Bar",
+  "Ctrl+d": "Bookmark Current Page",
+  "Ctrl+/": "Show/Hide Shortcuts",
+  "Escape": "Close the Current Dialog"
+}
