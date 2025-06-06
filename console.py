@@ -14,6 +14,11 @@ class Console:
             ("Console initialized.", "Ready to accept commands.")
         ]
 
+    def add_message(self, message: str, output: str):
+        self.messages.append((message, output))
+        if hasattr(self, "text_area") and self.text_area is not None:
+            self._write(message, output)
+
     def open(self, parent, title="Console"):
         parent = parent
         self.dialog = Toplevel(parent)
@@ -42,8 +47,14 @@ class Console:
         self.text_area.pack(fill="both", expand=True, padx=2, pady=2)
         self.scrollbar.configure(command=self.text_area.yview)
 
+        self.dialog.protocol("WM_DELETE_WINDOW", self.on_close)
+
         for cmd, output in self.messages:
             self._write(cmd, output)
+
+    def on_close(self):
+        self.text_area = None
+        self.dialog.destroy()
 
     def _write(self, message: str, output: str):
         self.text_area.configure(state="normal")
@@ -82,4 +93,4 @@ class Console:
             output = "JavaScript context not available."
 
         if output is not None:
-            self._write(f"> {cmd}", str(output))
+            self.add_message(f"> {cmd}", str(output))

@@ -5,7 +5,7 @@ from console import Console
 from scrollbar import Scrollbar
 from css_parser import CSSParser
 from url_parser import URLParser
-from html_parser import HTMLParser
+from html_parser import HTMLParser, print_tree
 from history_manager import HistoryManager
 from js_context import JSContext
 from layout import Layout, print_layout_tree
@@ -41,6 +41,9 @@ class Tab:
         self.content = ""
         self.mediaType = "text/plain"
 
+        # dom tree root
+        self.dom_root = None
+
         # layout
         self.display_list = []
 
@@ -66,10 +69,17 @@ class Tab:
             ("clear_history", self.clear_history),
             ("get_prev_history_url", self.print_prev_history_url),
             ("get_next_history_url", self.print_next_history_url),
+            ("print_document_tree", self.print_dom_tree),
         ]
         self.js_ctx._register(data)
 
         self.load_defaults()
+
+    def print_dom_tree(self):
+        if self.dom_root is None:
+            self.js_ctx.result = "null"
+        else:
+            self.js_ctx.result = print_tree(self.dom_root, 0, False)
 
     def log(self, *args):
         self.js_ctx.result = " ".join(str(arg) for arg in args)
@@ -155,7 +165,7 @@ class Tab:
                 if "text/css" in mediaType:
                     css_parser.parse(external_styles=content)
             except Exception as e:
-                print(f"Error loading CSS: {e}")
+                self.console.add_message("", f"Error loading CSS from {link}: {e}")
         return css_parser.styles
 
     def load_defaults(self):
@@ -182,7 +192,9 @@ class Tab:
                 ):
                     self.js_ctx.run(link, content)
             except Exception as e:
-                print(f"Error loading JavaScript: {e}")
+                self.console.add_message(
+                    "", f"Error loading JavaScript from {link}: {e}"
+                )
 
     def parse(self):
         self.display_list.clear()
@@ -194,31 +206,31 @@ class Tab:
 
         if "text/html" in self.mediaType:
             html_parser = HTMLParser(self.content)
-            root = html_parser.parse()
+            self.dom_root = html_parser.parse()
 
             if self.url.startswith("view-source:"):
                 self._change_canvas_background("black")
                 self.title = self.url
-                lTree.source_view(self.font, root)
+                lTree.source_view(self.font, self.dom_root)
             else:
                 self._change_canvas_background("white")
                 if self.url.startswith("data:text/html"):
                     self.title = self.url
                 else:
-                    title = html_parser.extract_title(root)
+                    title = html_parser.extract_title(self.dom_root)
                     if title is None:
                         self.title = URLParser().extract_base_url(self.url)
                     else:
                         self.title = title
 
                 # Extract links from the HTML content
-                html_parser.extract_links(root)
+                html_parser.extract_links(self.dom_root)
                 styles = self.load_css(html_parser.links.get("css", []))
 
                 # render the HTML content
-                lTree.layout(root, styles=styles)
+                lTree.layout(self.dom_root, styles=styles)
                 lTree.render(lTree.node)
-                # print_layout_tree(s.node)
+                # print_layout_tree(lTree.node)
 
                 # Load JavaScript files
                 self.load_js(html_parser.links.get("js", []))

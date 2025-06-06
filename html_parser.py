@@ -281,15 +281,28 @@ class HTMLParser:
         return text
 
 
-def print_tree(start_node=None, indent=0):
+def print_tree(start_node=None, indent=0, log=True):
     if start_node is None:
         return
 
-    print(" " * indent, start_node)
+    text = [""]
 
-    if isinstance(start_node, Document) or isinstance(start_node, Element):
-        for child in start_node.children:
-            print_tree(child, indent + 2)
+    def recurse(node, lst, indent=0):
+        txt = " " * indent + " "
+        if isinstance(node, Element):
+            txt += node.tag
+        elif isinstance(node, Text):
+            txt += node.text
+        if log:
+            print(txt)
+        lst[0] += txt + "\n"
+
+        if isinstance(node, Document) or isinstance(node, Element):
+            for child in node.children:
+                recurse(child, lst, indent + 2)
+
+    recurse(start_node, text, indent)
+    return text[0]
 
 
 if __name__ == "__main__":

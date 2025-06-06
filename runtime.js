@@ -19,7 +19,14 @@ window = {
       call_python("get_prev_history_url");
     },
   },
+
+  document: {
+    tree: function () {
+      call_python("print_document_tree");
+    },
+  },
 };
 
 console = window.console;
 history = window.history;
+document = window.document;
