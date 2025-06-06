@@ -31,6 +31,7 @@ class JSContext:
         :param code: The JavaScript code to execute.
         """
         try:
+            self.result = None
             return self.interp.evaljs(code)
         except dukpy.JSRuntimeError as e:
             raise RuntimeError(

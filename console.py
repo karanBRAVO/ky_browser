@@ -72,11 +72,10 @@ class Console:
         elif self.js_ctx is not None:
             try:
                 self.js_ctx.run("", cmd)
-                if self.js_ctx is None:
-                    output = "Unknown command."
+                if self.js_ctx.result is None:
+                    output = "undefined"
                 else:
                     output = self.js_ctx.result
-                    self.js_ctx.result = None
             except Exception as e:
                 output = f"Unknown command: {cmd}\nError: {e}"
         else:
