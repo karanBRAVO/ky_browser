@@ -101,6 +101,54 @@ class Browser:
         self.window.bind("<Control-b>", lambda _: self._open_bookmark_pane())
         self.window.bind("<Control-d>", lambda _: self._add_new_bookmark())
         self.window.bind("<Control-/>", lambda _: self._open_shortcuts_pane())
+        self.window.bind("<Control-h>", lambda _: self._open_history_pane())
+
+    def _open_history_pane(self):
+        self._toggle_overlay()
+        self.overlay_label.configure(text="History Pane")
+        self._clear_overlay_content()
+
+        canvas = Canvas(self.overlay, borderwidth=0, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self.overlay, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        history_frame = ttk.Frame(canvas)
+        history_frame.pack(fill="both", expand=True)
+        canvas.create_window((0, 0), window=history_frame, anchor="nw")
+
+        def on_frame_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        history_frame.bind("<Configure>", on_frame_configure)
+
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta // 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        history = self._current_tab().history_manager.history
+        if not history:
+            no_history_label = ttk.Label(
+                history_frame, text="No history found.", font=("Lucida Console", 12)
+            )
+            no_history_label.pack(pady=20)
+        else:
+            for i, url in enumerate(history):
+                history_btn = ttk.Button(
+                    history_frame,
+                    text=url[:30] + "..." if len(url) > 30 else url,
+                    command=lambda u=url: self.load(u, update_history=False),
+                )
+                history_btn.pack(anchor="w", padx=10, pady=2)
+                history_label = ttk.Label(
+                    history_frame,
+                    text=url,
+                    font=("Lucida Console", 10),
+                    foreground="blue",
+                )
+                history_label.pack(anchor="w", padx=10, pady=2)
 
     def _open_shortcuts_pane(self):
         self._toggle_overlay()
@@ -464,6 +512,16 @@ class Browser:
             command=self._add_tab,
         )
 
+    def _back_btn_click(self):
+        url = self._current_tab().get_prev_history_url()
+        if url is not None:
+            self.load(url, update_history=False)
+
+    def _forward_btn_click(self):
+        url = self._current_tab().get_next_history_url()
+        if url is not None:
+            self.load(url, update_history=False)
+
     def _create_navbar(self):
         self.navbar = ttk.Frame(self.window, padding=5)
 
@@ -471,14 +529,14 @@ class Browser:
             self.navbar,
             text="←",
             style="Browser.TButton",
-            command=lambda: print(f"Back Button Pressed"),
+            command=self._back_btn_click,
         )
 
         self.forward_btn = ttk.Button(
             self.navbar,
             text="→",
             style="Browser.TButton",
-            command=self.load,
+            command=self._forward_btn_click,
         )
 
         self.reload_btn = ttk.Button(
@@ -498,10 +556,10 @@ class Browser:
             command=self.load,
         )
 
-    def load(self, url=None):
+    def load(self, url=None, update_history=True):
         url = url if url is not None else self.url_entry.get()
         if url:
-            self._current_tab().load(url)
+            self._current_tab().load(url, update_history)
             self._update_tab_title(self._current_tab().title)
             self._update_url_entry()
 

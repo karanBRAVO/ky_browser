@@ -10,13 +10,31 @@ Read the [wiki](https://github.com/karanBRAVO/ky_browser/wiki) for more informat
 
 Everything built in this project is done from scratch.
 
-- `URL` parser - defined in `url.py`
-  - `Source View` - load the source code of the webpage
-  - `File View` - load local files
-  - `data view` - load data from the URL
-- `HTML` parser - defined in `html_parser.py`
-- `CSS` parser - defined in `css_parser.py`
-- `Layout Tree` generator and `Renderer` - defined in `layout.py`
-- `Window` and `Event Loop` - defined in `window.py` (renders all the contents downloaded by the url parser)
-  - `Syntax Highlighting`
-  - `Webpage Rendering`
+- `URL Parser` - Parses URLs and handles different protocols (http, https, file, view-source, data etc.)
+- `HTML Parser` - Parses HTML documents and builds a Document Object Model (DOM) tree.
+- `CSS Parser` - Parses CSS stylesheets and applies styles to the DOM.
+- `Layout Tree` - Generates a layout tree from the DOM and applies styles.
+- `Renderer` - Renders the layout tree to the screen.
+- `History` - Keeps track of visited URLs and allows navigation through history.
+- `Bookmarks` - Allows users to bookmark URLs for quick access.
+- `Shortcuts` - Provides keyboard shortcuts for common actions like back, forward, reload.
+
+## Getting Started
+
+To run this project, you need to have Python installed on your machine. You can download Python from the [official website](https://www.python.org/downloads/).
+
+You also have to install the `tkinter` library, which is usually included with Python installations. If it's not installed, you can install it using pip:
+
+```bash
+pip install tk
+```
+
+After installing Python, you can clone this repository and run the `window.py` file to start the browser.
+
+```bash
+git clone https://github.com/karanBRAVO/ky_browser
+
+cd ky_browser
+
+python window.py
+```

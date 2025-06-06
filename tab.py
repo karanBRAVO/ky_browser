@@ -5,6 +5,7 @@ from scrollbar import Scrollbar
 from css_parser import CSSParser
 from url_parser import URLParser
 from html_parser import HTMLParser
+from history_manager import HistoryManager
 from layout import Layout, print_layout_tree
 
 
@@ -40,6 +41,9 @@ class Tab:
         # layout
         self.display_list = []
 
+        # history manager
+        self.history_manager = HistoryManager()
+
         # default font
         self.font = Font().get_font()
 
@@ -58,11 +62,27 @@ class Tab:
     def _clear_canvas(self):
         self.canvas.delete("all")
 
-    def load(self, url: str):
+    def get_prev_history_url(self):
+        try:
+            url = self.history_manager.back()
+            return url
+        except IndexError:
+            return None
+
+    def get_next_history_url(self):
+        try:
+            url = self.history_manager.forward()
+            return url
+        except IndexError:
+            return None
+
+    def load(self, url: str, update_history: bool = True):
         if url:
             # download the content from the URL
             self.url = url
             self.content, self.mediaType = URL(url).request()
+            if self.url and update_history:
+                self.history_manager.add(self.url)
             # parse the loaded content
             self.parse()
             # draw the content on the canvas
