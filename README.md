@@ -1,6 +1,6 @@
 # Ky_Browser
 
-`Tech Stack`: **Python**, **Tkinter**, **Sockets**
+`Tech Stack`: **Python**, **Tkinter**, **Sockets**, **Dukpy**
 
 Want to create a simple browser using Python and Tkinter? This project is a great starting point. It demonstrates how to use the tkinter library to create a basic web browser interface.
 
@@ -18,6 +18,8 @@ Everything built in this project is done from scratch.
 - `History` - Keeps track of visited URLs and allows navigation through history.
 - `Bookmarks` - Allows users to bookmark URLs for quick access.
 - `Shortcuts` - Provides keyboard shortcuts for common actions like back, forward, reload.
+- `JavaScript Support` - Uses the `dukpy` library to execute JavaScript code in the browser.
+- `Console` - Provides a console for executing JavaScript code and debugging.
 
 ## Getting Started
 
@@ -27,6 +29,12 @@ You also have to install the `tkinter` library, which is usually included with P
 
 ```bash
 pip install tk
+```
+
+If you want to use the `dukpy` library for JavaScript support, you can install it using pip as well:
+
+```bash
+pip install dukpy
 ```
 
 After installing Python, you can clone this repository and run the `window.py` file to start the browser.

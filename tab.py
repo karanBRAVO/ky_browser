@@ -1,6 +1,7 @@
 from font import Font
 from download import URL
 from tkinter import Canvas
+from console import Console
 from scrollbar import Scrollbar
 from css_parser import CSSParser
 from url_parser import URLParser
@@ -49,6 +50,9 @@ class Tab:
         # JavaScript context
         self.js_ctx = JSContext()
 
+        # console
+        self.console = Console(self.js_ctx)
+
         # default font
         self.font = Font().get_font()
 
@@ -57,7 +61,7 @@ class Tab:
         self.HEIGHT = screen_height
 
         data = [
-            ("log", print),
+            ("log", self.log),
             ("print_history", self.print_history),
             ("clear_history", self.clear_history),
             ("get_prev_history_url", self.print_prev_history_url),
@@ -65,26 +69,31 @@ class Tab:
         ]
         self.js_ctx._register(data)
 
+        self.load_defaults()
+
+    def log(self, *args):
+        self.js_ctx.result = " ".join(str(arg) for arg in args)
+
     def print_prev_history_url(self):
         url = self.get_prev_history_url()
         if url is None:
-            print("null")
+            self.js_ctx.result = "null"
         else:
-            print(url)
+            self.js_ctx.result = url
 
     def print_next_history_url(self):
         url = self.get_next_history_url()
         if url is None:
-            print("null")
+            self.js_ctx.result = "null"
         else:
-            print(url)
+            self.js_ctx.result = url
 
     def print_history(self):
-        print(self.history_manager)
+        self.js_ctx.result = self.history_manager.history
 
     def clear_history(self):
         self.history_manager.clear()
-        print("History cleared.")
+        self.js_ctx.result = "History cleared."
 
     def _update_screen_dimensions(self, screen_width: int, screen_height: int):
         self.WIDTH = screen_width
@@ -149,14 +158,15 @@ class Tab:
                 print(f"Error loading CSS: {e}")
         return css_parser.styles
 
-    def load_js(self, links: list[str]):
-        base_url = URLParser().extract_base_url(self.url)
-
+    def load_defaults(self):
         # load the default browser scripts
         link = self.BROWSER_DEFAULT_JAVASCRIPT
         content, _ = URL(link).request()
         if content:
             self.js_ctx.run(link, content)
+
+    def load_js(self, links: list[str]):
+        base_url = URLParser().extract_base_url(self.url)
 
         for link in links:
             try:

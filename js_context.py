@@ -8,6 +8,7 @@ class JSContext:
 
     def __init__(self):
         self.interp = dukpy.JSInterpreter()
+        self.result = None
 
     def _register(self, data):
         for func_name, func in data:
@@ -32,4 +33,6 @@ class JSContext:
         try:
             return self.interp.evaljs(code)
         except dukpy.JSRuntimeError as e:
-            print("script:", script, "crashed", e)
+            raise RuntimeError(
+                f"JavaScript execution error in script '{script}': {e}"
+            ) from e

@@ -9,5 +9,6 @@
   "Ctrl+b": "Toggle Bookmarks Bar",
   "Ctrl+d": "Bookmark Current Page",
   "Ctrl+/": "Show/Hide Shortcuts",
-  "Escape": "Close the Current Dialog"
+  "Escape": "Close the Current Dialog",
+  "F12": "Opens Developer Tools"
 }

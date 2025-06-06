@@ -97,11 +97,16 @@ class Browser:
         self.window.bind("<Control-l>", lambda _: self._focus_url_entry())
         self.window.bind("<Control-r>", lambda _: self.load())
         self.window.bind("<F5>", lambda _: self.load())
+        self.window.bind("<F12>", lambda _: self._open_console_window())
         self.window.bind("<Escape>", lambda _: self._hide_overlay())
         self.window.bind("<Control-b>", lambda _: self._open_bookmark_pane())
         self.window.bind("<Control-d>", lambda _: self._add_new_bookmark())
         self.window.bind("<Control-/>", lambda _: self._open_shortcuts_pane())
         self.window.bind("<Control-h>", lambda _: self._open_history_pane())
+
+    def _open_console_window(self):
+        current_url = self._current_tab().url
+        self._current_tab().console.open(self.window, "Console - " + current_url)
 
     def _open_history_pane(self):
         self._toggle_overlay()
