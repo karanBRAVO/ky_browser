@@ -35,7 +35,13 @@ class HistoryManager:
         """
         Clear the history.
         """
+        curr_item = (
+            self.history[self.current_index] if self.current_index >= 0 else None
+        )
         self.history.clear()
+        if curr_item is not None:
+            self.history.append(curr_item)
+            self.current_index = 0
 
     def back(self):
         """
