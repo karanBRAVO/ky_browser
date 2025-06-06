@@ -30,6 +30,7 @@ class HTMLParser:
 
         self.links = {
             "css": [],
+            "js": [],
             "a": [],
             "img": [],
         }
@@ -85,6 +86,11 @@ class HTMLParser:
                 href = root.attributes.get("href")
                 if href:
                     self._add_link("css", href)
+
+            elif root.tag == "script" and root.attributes.get("src"):
+                href = root.attributes.get("src")
+                if href:
+                    self._add_link("js", href)
 
             elif root.tag == "a":
                 href = root.attributes.get("href")
@@ -165,7 +171,7 @@ class HTMLParser:
             j = html.find("</style>", j + 1)
             j += len("/style>")
         # script tags
-        elif content.startswith("script"):
+        elif content.startswith("script") and "src" not in content:
             j = html.find("</script>", j + 1)
             j += len("/script>")
         else:

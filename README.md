@@ -38,3 +38,28 @@ cd ky_browser
 
 python window.py
 ```
+
+`note:` If you are using Python 3, you may need to use `python3` instead of `python` in the command above.
+
+> You also have to replace the local paths in the code.
+
+To test the browser, you can use the following URLs:
+
+Start the server to serve the local files:
+
+```bash
+python server.py
+```
+
+Then, open the browser and navigate to:
+
+- `http://localhost:8080` (for local files)
+- `http://localhost:8080/index.html` (for a specific HTML file)
+- `http://localhost:8080/style.css` (for a CSS file)
+- `view-source:http://localhost:8080/index.html` (for viewing the source code of an HTML file)
+- `data:text/html,<h1>Hello, World!</h1>` (for displaying a simple HTML document)
+- `file:///path/to/your/file.html` (for viewing a local HTML file, replace `/path/to/your/file.html` with the actual path to your file)
+
+or you can use any valid URL, such as:
+
+- `http://example.com`

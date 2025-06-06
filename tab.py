@@ -6,6 +6,7 @@ from css_parser import CSSParser
 from url_parser import URLParser
 from html_parser import HTMLParser
 from history_manager import HistoryManager
+from js_context import JSContext
 from layout import Layout, print_layout_tree
 
 
@@ -16,6 +17,7 @@ class Tab:
 
     HSTEP, VSTEP = 13, 18
     BROWSER_DEFAULT_STYLESHEET = "file:///E:/ky_browser/browser.css"
+    BROWSER_DEFAULT_JAVASCRIPT = "file:///E:/ky_browser/runtime.js"
 
     def __init__(
         self,
@@ -44,12 +46,45 @@ class Tab:
         # history manager
         self.history_manager = HistoryManager()
 
+        # JavaScript context
+        self.js_ctx = JSContext()
+
         # default font
         self.font = Font().get_font()
 
         # dimensions
         self.WIDTH = screen_width
         self.HEIGHT = screen_height
+
+        data = [
+            ("log", print),
+            ("print_history", self.print_history),
+            ("clear_history", self.clear_history),
+            ("get_prev_history_url", self.print_prev_history_url),
+            ("get_next_history_url", self.print_next_history_url),
+        ]
+        self.js_ctx._register(data)
+
+    def print_prev_history_url(self):
+        url = self.get_prev_history_url()
+        if url is None:
+            print("null")
+        else:
+            print(url)
+
+    def print_next_history_url(self):
+        url = self.get_next_history_url()
+        if url is None:
+            print("null")
+        else:
+            print(url)
+
+    def print_history(self):
+        print(self.history_manager)
+
+    def clear_history(self):
+        self.history_manager.clear()
+        print("History cleared.")
 
     def _update_screen_dimensions(self, screen_width: int, screen_height: int):
         self.WIDTH = screen_width
@@ -114,6 +149,31 @@ class Tab:
                 print(f"Error loading CSS: {e}")
         return css_parser.styles
 
+    def load_js(self, links: list[str]):
+        base_url = URLParser().extract_base_url(self.url)
+
+        # load the default browser scripts
+        link = self.BROWSER_DEFAULT_JAVASCRIPT
+        content, _ = URL(link).request()
+        if content:
+            self.js_ctx.run(link, content)
+
+        for link in links:
+            try:
+                idx = link.find("http")
+                if idx == -1:
+                    link = f"{base_url}/{link.lstrip('/')}"
+                else:
+                    link = link[idx:]
+                content, mediaType = URL(link).request()
+                if (
+                    "text/javascript" in mediaType
+                    or "application/javascript" in mediaType
+                ):
+                    self.js_ctx.run(link, content)
+            except Exception as e:
+                print(f"Error loading JavaScript: {e}")
+
     def parse(self):
         self.display_list.clear()
 
@@ -149,6 +209,9 @@ class Tab:
                 lTree.layout(root, styles=styles)
                 lTree.render(lTree.node)
                 # print_layout_tree(s.node)
+
+                # Load JavaScript files
+                self.load_js(html_parser.links.get("js", []))
         else:
             self._change_canvas_background("#1c1b22")
             self.title = self.url
